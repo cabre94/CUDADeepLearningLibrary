@@ -10,7 +10,7 @@ Description:
 
 // #include "Matrix/Matrix.h"
 #include "Matrix.h"
-#include "Activation.h"
+#include "Activation.cu"
 
 
 
@@ -36,7 +36,7 @@ int main(int argc, const char** argv) {
 	// sigmoidKernel<<< nBlocks, nThreads >>>(A, A.size);
 	// sigmoidKernel<<< 1, 6 >>>(&A, A.size);
 	// sigmoidKernel<<< 1, 6 >>>(A.d_elem, A.size);
-	activacion->call(A);
+	activacion->call(A,A);
 	cudaDeviceSynchronize();
 
 	A.print();
