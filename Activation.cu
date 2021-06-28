@@ -5,28 +5,40 @@ Author : Facundo Martin Cabrera
 Email: cabre94@hotmail.com facundo.cabrera@ib.edu.ar
 GitHub: https://github.com/cabre94
 GitLab: https://gitlab.com/cabre94
-Description: 
+Description:
+//TODO - Ver si puedo poner un getter que de el d_elem por referencia, asi lo puedo dejar privado
 */
+
+// si prefiere trabajar con indices de fila y columna 
+// estos macros son utiles:
+
+// C[IDX2C(i,j,M)] == valor en fila i (=0,...,Width-1) columna (j=0,1,...Height-1), row-major-C
+// #define  IDX2C(i,j,ld) (((j)*(ld))+( i )) 
+
+// C[IDX2F(i,j,M)] == valor en fila i (=1,...,Width) columna (j=1,...Height), column-major-F
+// #define IDX2F(i,j,ld) ((((j)-1)*(ld))+((i)-1)) 
 
 #include "Activation.h"
 
 class Matrix{
-private:
-	int width;
+public:
 	int height;
+	int width;
 	size_t size;
 	float* h_elem;
 	float* d_elem;
 
-public:
+// public:
 	Matrix(int width, int height);
 	~Matrix();
 
+	void print();
+
 	void copyDeviceToHost();
 
-}:
+};
 
-Matrix::Matrix(int width, int height) : width(width), height(height), size(width * height){
+Matrix::Matrix(int height, int width) : height(height), width(width), size(width * height){
 	// size = width * height;
 
 	h_elem = new float[size];
@@ -37,22 +49,30 @@ Matrix::Matrix(int width, int height) : width(width), height(height), size(width
 
 	// Allocacion en device
 	cudaMalloc(&d_elem, size * sizeof(float));
-	cudaMemcpy( d_elem, a, size * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy( d_elem, h_elem, size * sizeof(float), cudaMemcpyHostToDevice);
 }
 
 Matrix::~Matrix(){
 	delete [] h_elem;
-	cudaFree(d_a);
+	cudaFree(d_elem);
 }
 
 void Matrix::copyDeviceToHost(){
 	cudaMemcpy(h_elem, d_elem, size * sizeof(float), cudaMemcpyDeviceToHost);
 }
 
+void Matrix::print(){
+	for(int i=0; i < height; ++i){
+		for(int j=0; j < width; ++j){
+			std::cout << h_elem[i*height + j] << "\t";
+		}
+		std::cout << std::endl;
+	}
+}
 
 /*
 ------------------------------
-*/
+
 class Activation{
 private:
     std::string name;
@@ -93,13 +113,54 @@ public:
 
 Sigmoid::Sigmoid(PieceColour C):Activation(C,PAWN,"Sigmoid") {}
 
+*/
 
+
+// __device__ __host__ float sigmoid(int x){
+__device__ __host__
+float sigmoid(int x){
+	return 1.0f / (1 + expf(-x));
+}
+
+// __device__ __host__ 
+// float MiFuncion(int i){
+//     // return sin(2*M_PI*i/10.0);
+//     return expf(2*M_PI*i/10.0);
+// }
+
+__global__ void sigmoidKernel(Matrix A, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		A.d_elem[i] = sigmoid(A.d_elem[i]);
+		// A.d_elem[i] = MiFuncion(A.d_elem[i]);
+		// A.d_elem[i] = MiFuncion(i);
+		i += blockDim.x*gridDim.x;
+	}
+}
+
+// __global__ void Tabular(float *d_c, int n){
+// 	// indice de thread mapeado a indice de array 
+// 	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+// 	//COMPLETAR PARA QUE c[i]=MiFuncion(i)
+// 	//ASEGURARSE DE QUE TODO EL ARRAY ESTE TABULADO CON LA GRILLA LANZADA
+// 	//Y DE QUE NO SE ACCEDAN POSICIONES ILEGALES
+// 	if(i < n)
+// 		d_c[i] = MiFuncion(i);
+// }
 
 
 int main(int argc, const char** argv) {
 
-    hello<<<1, 10>>>();  // 1 bloque con 10 hilos
-    cudaDeviceSynchronize();
+	Matrix A(5, 2);
+
+	A.print();
+
+
+
+    // hello<<<1, 10>>>();  // 1 bloque con 10 hilos
+    // cudaDeviceSynchronize();
 
     return 0;
 }
