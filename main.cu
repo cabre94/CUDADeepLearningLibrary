@@ -23,7 +23,8 @@ int main(int argc, const char** argv) {
 	Matrix B(3, 2);
 
 	Activation *activacion;
-	activacion = new Sigmoid;
+	// activacion = new Sigmoid;
+	activacion = new Relu;
 
 	std::cout << "A" << std::endl;
 	A.print();
