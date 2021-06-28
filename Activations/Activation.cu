@@ -68,7 +68,7 @@ void Matrix::print(){
 	}
 }
 
-/*
+
 ------------------------------
 
 class Activation{
@@ -111,7 +111,7 @@ public:
 
 Sigmoid::Sigmoid(PieceColour C):Activation(C,PAWN,"Sigmoid") {}
 
-*/
+
 
 
 // __device__ __host__ float sigmoid(int x){
