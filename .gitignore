@@ -5,3 +5,7 @@
 *.cubin
 *.fatbin
 aux_scripts/*
+ChessCpp/*
+Practica_2/*
+core.*
+Cuda.*
