@@ -261,4 +261,77 @@ __global__ void linearGradKernel(float *d_in, float *d_out, int size){
 	}
 }
 
+/* ----------------------------
+Tanh class and Kernels
+---------------------------- */
+__global__ void tanhKernel(float *d_in, float *d_out, int size);
+__global__ void tanhGradKernel(float *d_in, float *d_out, int size);
+
+class Tanh : public Activation{
+public:
+	Tanh();
+    ~Tanh();
+	
+	void call(Matrix &in, Matrix &out);
+	void gradient(Matrix &in, Matrix &out);
+};
+
+Tanh::Tanh():Activation("Tanh") {}
+
+Tanh::~Tanh(){}
+
+void Tanh::call(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	tanhKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
+	cudaDeviceSynchronize();
+}
+
+void Tanh::gradient(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	tanhGradKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
+	cudaDeviceSynchronize();
+}
+
+__global__ void tanhKernel(float *d_in, float *d_out, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_out[i] = tanhf(d_in[i]);
+		i += blockDim.x * gridDim.x;
+	}
+}
+
+__global__ void tanhGradKernel(float *d_in, float *d_out, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_out[i] = 1.0f - powf(tanhf(d_in[i]), 2.0f);
+		i += blockDim.x * gridDim.x;
+	}
+}
+
 #endif
