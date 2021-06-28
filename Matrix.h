@@ -25,11 +25,6 @@ public:
 	float* getDeviceData();
 };
 
-// __device__ __host__ float sigmoid(int x){
-// __device__ __host__ float sigmoid(int x);
-
-// __global__ void sigmoidKernel(float* d_e, int size);
-
 
 Matrix::Matrix(int height, int width) : height(height), width(width), size(width * height){
 	h_elem = new float[size];
