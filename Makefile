@@ -1,10 +1,12 @@
-APPS=Activations
+APPS=main
 
 all: ${APPS}
 
 %: %.cu
 	# nvcc -O2 -lcublas -DCUBLASXt -DCUBLAS -DSIMPLECPU -DSIMPLECUDA -o $@ $<
-	nvcc -O2 -o $@ $<
+	# nvcc -O2 -o $@ $<
+	# nvcc -O2 -o ejecutable $<
+	nvcc -o ejecutable $<
 
 clean:
 	rm -f ${APPS} *.dat
@@ -13,7 +15,11 @@ run:
 	./multmat_solucion
 
 submit:	clean all
+	qsub jobGPU
+
+watch:	clean all
 	qsub jobGPU; watch qstat
+
 
 
 
