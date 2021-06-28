@@ -180,9 +180,9 @@ __global__ void reluGradKernel(float *d_in, float *d_out, int size){
 
 	while(i < size){
 		if(d_in[i] > 0)
-			d_out[i] = 1;
+			d_out[i] = 1.0;
 		else
-			d_out[i] = 0;
+			d_out[i] = 0.0;
 
 		i += blockDim.x * gridDim.x;
 	}
@@ -330,6 +330,85 @@ __global__ void tanhGradKernel(float *d_in, float *d_out, int size){
 
 	while(i < size){
 		d_out[i] = 1.0f - powf(tanhf(d_in[i]), 2.0f);
+		i += blockDim.x * gridDim.x;
+	}
+}
+
+/* ----------------------------
+LeakyRelu class and Kernels
+---------------------------- */
+__global__ void leakyReluKernel(float *d_in, float *d_out, int size, float arg);
+__global__ void leakyReluGradKernel(float *d_in, float *d_out, int size, float arg);
+
+class LeakyRelu : public Activation{
+private:
+	float arg;
+public:
+	LeakyRelu(float arg=0.1);
+    ~LeakyRelu();
+	
+	void call(Matrix &in, Matrix &out);
+	void gradient(Matrix &in, Matrix &out);
+};
+
+LeakyRelu::LeakyRelu(float arg_):Activation("LeakyRelu") {arg = arg_;}
+
+LeakyRelu::~LeakyRelu(){}
+
+void LeakyRelu::call(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	leakyReluKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size, arg);
+	cudaDeviceSynchronize();
+}
+
+void LeakyRelu::gradient(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	leakyReluGradKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size, arg);
+	cudaDeviceSynchronize();
+}
+
+__global__ void leakyReluKernel(float *d_in, float *d_out, int size, float arg){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_out[i] = fmaxf(d_in[i], d_in[i]*arg);
+		i += blockDim.x * gridDim.x;
+	}
+}
+
+__global__ void leakyReluGradKernel(float *d_in, float *d_out, int size, float arg){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		if(d_in[i] > 0)
+			d_out[i] = 1.0;
+		else
+			d_out[i] = 1.0*arg;
+
 		i += blockDim.x * gridDim.x;
 	}
 }
