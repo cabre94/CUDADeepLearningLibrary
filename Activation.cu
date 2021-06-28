@@ -188,4 +188,77 @@ __global__ void reluGradKernel(float *d_in, float *d_out, int size){
 	}
 }
 
+/* ----------------------------
+Linear class and Kernels
+---------------------------- */
+__global__ void linearKernel(float *d_in, float *d_out, int size);
+__global__ void linearGradKernel(float *d_in, float *d_out, int size);
+
+class Linear : public Activation{
+public:
+	Linear();
+    ~Linear();
+	
+	void call(Matrix &in, Matrix &out);
+	void gradient(Matrix &in, Matrix &out);
+};
+
+Linear::Linear():Activation("Linear") {}
+
+Linear::~Linear(){}
+
+void Linear::call(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	linearKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
+	cudaDeviceSynchronize();
+}
+
+void Linear::gradient(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	linearGradKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
+	cudaDeviceSynchronize();
+}
+
+__global__ void linearKernel(float *d_in, float *d_out, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_out[i] = d_in[i];
+		i += blockDim.x * gridDim.x;
+	}
+}
+
+__global__ void linearGradKernel(float *d_in, float *d_out, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_out[i] = 1;
+		i += blockDim.x * gridDim.x;
+	}
+}
+
 #endif
