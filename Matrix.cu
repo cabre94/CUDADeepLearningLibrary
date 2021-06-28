@@ -15,7 +15,7 @@ public:
 	std::string dist;
 
 // public:
-	Matrix(int width, int height, std::string dist_ = "uniform", float w = 1);
+	Matrix(int width, int height, std::string dist = "uniform", float w = 1);
 	~Matrix();
 
 	void copyDeviceToHost();
@@ -26,10 +26,10 @@ public:
 };
 
 
-Matrix::Matrix(int height, int width, std::string dist_, float w)
+Matrix::Matrix(int height, int width, std::string dist, float w)
 			: height(height), width(width), size(width * height){
 	weight = w;
-	dist = dist_;
+	dist = dist;
 	h_elem = new float[size];
 	
 	// float aux[3] = {-2, 0 , 2};
@@ -38,11 +38,20 @@ Matrix::Matrix(int height, int width, std::string dist_, float w)
 	// 	// h_elem[i] = 0;
 	// 	h_elem[i] = aux[i%3];
 	// }
-	if(dist == "uniform"){
-		std::default_random_engine generator;
+	std::random_device rd;
+	std::mt19937 mt(rd());
+
+	if(dist == "normal"){
+		// std::default_random_engine generator;
   		std::normal_distribution<float> distribution(0.0,weight);
 		for(int i=0; i < size; ++i){
-			h_elem[i] = distribution(generator);
+			h_elem[i] = distribution(mt);
+		}
+	}else if(dist == "uniform"){
+		// std::default_random_engine generator;
+		std::uniform_real_distribution<float> distribution(-weight,1.0);
+		for(int i=0; i < size; ++i){
+			h_elem[i] = distribution(mt);
 		}
 	}
 
