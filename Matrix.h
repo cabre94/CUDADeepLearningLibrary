@@ -21,6 +21,8 @@ public:
 	void copyDeviceToHost();
 	void copyHostToDevice();
 	void print();
+
+	float* getDeviceData();
 };
 
 // __device__ __host__ float sigmoid(int x){
@@ -63,104 +65,8 @@ void Matrix::print(){
 	}
 }
 
-/*
-------------------------------
-
-class Activation{
-private:
-    std::string name;
-    
-public:
-	__host__ __device__ Activation(std::string name_);	//Default constructor
-	__host__ __device__ virtual ~Activation();
-
-	Activation(const Activation &) = delete;	//Copy constructor
-	Activation &operator=(const Activation &) = delete;	//Copy assignment
-	Activation(Activation &&) = delete;	//Move constructor
-	Activation &operator=(Activation &&) = delete;	// Move assignment
-
-	__host__ __device__ std::string getName();
-	__host__ __device__ void call() = 0;
-};
-
-__host__ __device__ Activation::Activation(std::string name_) : name(name_) {}
-
-__host__ __device__ Activation::~Activation(){}
-
-__host__ __device__ std::string Activation::getName(){
-    return name;
+float* Matrix::getDeviceData(){
+	return d_elem;
 }
-
-
-
-
-
-class Sigmoid : public Activation{
-public:
-    __host__ __device__ Sigmoid(ActivationColour C);
-    __host__ __device__ ~Sigmoid();
-
-    void printActivation();
-    __host__ __device__ std::string getName();
-};
-
-Sigmoid::Sigmoid(PieceColour C):Activation(C,PAWN,"Sigmoid") {}
-
-*/
-
-
-// __device__ __host__ float sigmoid(int x){
-
-/*
-enum PieceType{KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN, CHAMPION, MAGICIAN};
-
-
-#include "Board.hpp"
-
-
-class Board;
-
-enum PieceColour{NONE, WHITE, BLACK};
-enum State{CHECK, CHECKMATE, NORMAL};       //!
-// enum PieceType{KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN};
-
-// enum MoveType{HORIZONTAL, VERTICAL, DIAGONAL, L, FORWARD, ONESTEP};
-
-
-class Piece{
-protected:
-    PieceColour colour;
-    PieceType type;
-    std::string name;
-    
-public:
-    Piece(PieceColour C, PieceType T, std::string N);	//Default constructor
-    virtual ~Piece();
-
-    Piece(const Piece &) = delete;	//Copy constructor
-    Piece &operator=(const Piece &) = delete;	//Copy assignment
-    Piece(Piece &&) = delete;	//Move constructor
-    Piece &operator=(Piece &&) = delete;	// Move assignment
-
-    PieceType getType();
-    PieceColour getColour();
-    std::string getName();
-
-    virtual std::set<std::string> getPossibleMoves(Board *board, std::string from) = 0;
-
-    virtual void printPiece() = 0;
-
-};
-
-#include "Pawn.hpp"
-#include "Rook.hpp"
-#include "Knight.hpp"
-#include "Bishop.hpp"
-#include "Queen.hpp"
-#include "King.hpp"
-#include "Magician.hpp"
-#include "Champion.hpp"
-
-*/
 
 #endif
