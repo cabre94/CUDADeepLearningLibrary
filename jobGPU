@@ -27,7 +27,14 @@
 #cargar variables de entorno para encontrar cuda
 # module load cuda/8.0.61
 # module load cuda
-module load cuda/10.1.243
+# module load cuda/10.1.243
+# module load cuda/11.1.1qsub
+# module load gcc/8.2.0
+# module load gcc/11.1.0
+
+# module load cuda/10.1.243
+# module load gcc/8.2.0
+
 
 #ejecutar el o los binarios con sus respectivos argumentos
 ./ejecutable
