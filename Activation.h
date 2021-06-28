@@ -4,62 +4,67 @@
 #include <iostream>
 #include <string>
 #include <stdio.h>
+#include "Matrix.h"
 
-__global__ void hello(){
-    printf("Hola\n");
-}
+__device__ __host__ float sigmoid(int x);
 
-
-/*
-enum PieceType{KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN, CHAMPION, MAGICIAN};
+__global__ void sigmoidKernel(float* d_e, int size);
 
 
-#include "Board.hpp"
-
-
-class Board;
-
-enum PieceColour{NONE, WHITE, BLACK};
-enum State{CHECK, CHECKMATE, NORMAL};       //!
-// enum PieceType{KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN};
-
-// enum MoveType{HORIZONTAL, VERTICAL, DIAGONAL, L, FORWARD, ONESTEP};
-
-
-class Piece{
-protected:
-    PieceColour colour;
-    PieceType type;
+class Activation{
+private:
     std::string name;
     
 public:
-    Piece(PieceColour C, PieceType T, std::string N);	//Default constructor
-    virtual ~Piece();
+	Activation(std::string name_);	//Default constructor
+	virtual ~Activation();
 
-    Piece(const Piece &) = delete;	//Copy constructor
-    Piece &operator=(const Piece &) = delete;	//Copy assignment
-    Piece(Piece &&) = delete;	//Move constructor
-    Piece &operator=(Piece &&) = delete;	// Move assignment
-
-    PieceType getType();
-    PieceColour getColour();
-    std::string getName();
-
-    virtual std::set<std::string> getPossibleMoves(Board *board, std::string from) = 0;
-
-    virtual void printPiece() = 0;
-
+	std::string getName();
+	virtual void call(Matrix &A) = 0;
 };
 
-#include "Pawn.hpp"
-#include "Rook.hpp"
-#include "Knight.hpp"
-#include "Bishop.hpp"
-#include "Queen.hpp"
-#include "King.hpp"
-#include "Magician.hpp"
-#include "Champion.hpp"
+Activation::Activation(std::string name_) : name(name_) {}
 
-*/
+Activation::~Activation(){}
+
+std::string Activation::getName(){
+    return name;
+}
+
+
+class Sigmoid : public Activation{
+public:
+	Sigmoid();
+    ~Sigmoid();
+
+	void call(Matrix &A);
+};
+
+Sigmoid::Sigmoid():Activation("Sigmoid") {}
+
+Sigmoid::~Sigmoid(){}
+
+void Sigmoid::call(Matrix &A){
+	// sigmoidKernel<<< 1, 6 >>>(A.d_elem, A.size);
+	sigmoidKernel<<< 1, 6 >>>(A.getDeviceData(), A.size);
+}
+
+
+
+__device__ __host__ float sigmoid(int x){
+	return 1.0f / (1 + expf(-x));
+}
+
+__global__ void sigmoidKernel(float* d_e, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_e[i] = sigmoid(d_e[i]);
+		i += blockDim.x*gridDim.x;
+	}
+}
+
+
+
 
 #endif
