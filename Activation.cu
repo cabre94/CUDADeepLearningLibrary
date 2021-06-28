@@ -10,38 +10,71 @@ Description:
 
 #include "Activation.h"
 
+class Matrix{
+private:
+	int width;
+	int height;
+	size_t size;
+	float* h_elem;
+	float* d_elem;
+
+public:
+	Matrix(int width, int height);
+	~Matrix();
+
+	void copyDeviceToHost();
+
+}:
+
+Matrix::Matrix(int width, int height) : width(width), height(height), size(width * height){
+	// size = width * height;
+
+	h_elem = new float[size];
+	int aux[3] = {-1, 0 , 1};
+	for(size_t i=0; i < size; ++i){
+		h_elem[i] = aux[i%3];
+	}
+
+	// Allocacion en device
+	cudaMalloc(&d_elem, size * sizeof(float));
+	cudaMemcpy( d_elem, a, size * sizeof(float), cudaMemcpyHostToDevice);
+}
+
+Matrix::~Matrix(){
+	delete [] h_elem;
+	cudaFree(d_a);
+}
+
+void Matrix::copyDeviceToHost(){
+	cudaMemcpy(h_elem, d_elem, size * sizeof(float), cudaMemcpyDeviceToHost);
+}
+
+
+/*
+------------------------------
+*/
 class Activation{
 private:
     std::string name;
     
 public:
-    __device__ Activation();	//Default constructor
-    __device__ virtual ~Activation();
+	__host__ __device__ Activation(std::string name_);	//Default constructor
+	__host__ __device__ virtual ~Activation();
 
-    Activation(const Activation &) = delete;	//Copy constructor
-    Activation &operator=(const Activation &) = delete;	//Copy assignment
-    Activation(Activation &&) = delete;	//Move constructor
-    Activation &operator=(Activation &&) = delete;	// Move assignment
+	Activation(const Activation &) = delete;	//Copy constructor
+	Activation &operator=(const Activation &) = delete;	//Copy assignment
+	Activation(Activation &&) = delete;	//Move constructor
+	Activation &operator=(Activation &&) = delete;	// Move assignment
 
-    __host__ __device__ std::string getName();
-
+	__host__ __device__ std::string getName();
+	__host__ __device__ void call() = 0;
 };
 
-__device__ Activation::Activation(std::string name)
+__host__ __device__ Activation::Activation(std::string name_) : name(name_) {}
 
-Piece::Piece(PieceColour C, PieceType T, std::string N) : colour(C), type(T), name(N) {}
+__host__ __device__ Activation::~Activation(){}
 
-Piece::~Piece(){}
-
-PieceType Piece::getType(){
-    return type;
-}
-
-PieceColour Piece::getColour(){
-    return colour;
-}
-
-std::string Piece::getName(){
+__host__ __device__ std::string Activation::getName(){
     return name;
 }
 
@@ -51,13 +84,11 @@ std::string Piece::getName(){
 
 class Sigmoid : public Activation{
 public:
-    Sigmoid(ActivationColour C);
-    ~Sigmoid();
+    __host__ __device__ Sigmoid(ActivationColour C);
+    __host__ __device__ ~Sigmoid();
 
     void printActivation();
-    std::string getName();
-
-    std::set<std::string> getPossibleMoves(Board  *board, std::string from);
+    __host__ __device__ std::string getName();
 };
 
 Sigmoid::Sigmoid(PieceColour C):Activation(C,PAWN,"Sigmoid") {}
