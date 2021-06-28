@@ -65,10 +65,8 @@ void Sigmoid::call(Matrix &in, Matrix &out){
 		nBlocks.x = deviceProp.maxGridSize[0];
 	}
 	
-	// sigmoidKernel<<< 1, 6 >>>(in.d_elem, out.d_elem, in.size);
-	// sigmoidKernel<<< nBlocks, nThreads >>>(in.d_elem, out.d_elem, in.size);
 	sigmoidKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
-	// cudaDeviceSynchronize();
+	cudaDeviceSynchronize();
 }
 
 void Sigmoid::gradient(Matrix &in, Matrix &out){
@@ -85,10 +83,7 @@ void Sigmoid::gradient(Matrix &in, Matrix &out){
 		nBlocks.x = deviceProp.maxGridSize[0];
 	}
 	
-	// sigmoidGradKernel<<< 1, 6 >>>(in.d_elem, out.d_elem, in.size);
-	// sigmoidGradKernel<<< nBlocks, nThreads >>>(in.d_elem, out.d_elem, in.size);
 	sigmoidGradKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
-	// sigmoidGradKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
 	cudaDeviceSynchronize();
 }
 
@@ -101,7 +96,7 @@ __global__ void sigmoidKernel(float *d_in, float *d_out, int size){
 
 	while(i < size){
 		d_out[i] = sigmoid(d_in[i]);
-		i += blockDim.x*gridDim.x;
+		i += blockDim.x * gridDim.x;
 	}
 }
 
@@ -112,13 +107,85 @@ __global__ void sigmoidGradKernel(float *d_in, float *d_out, int size){
 		float sig = sigmoid(d_in[i]);
 		d_out[i] = sig * (1.0f - sig);
 
-		i += blockDim.x*gridDim.x;
+		i += blockDim.x * gridDim.x;
 	}
 }
 
 /* ----------------------------
 Relu class and Kernels
 ---------------------------- */
+__global__ void reluKernel(float *d_in, float *d_out, int size);
+__global__ void reluGradKernel(float *d_in, float *d_out, int size);
 
+class Relu : public Activation{
+public:
+	Relu();
+    ~Relu();
+	
+	void call(Matrix &in, Matrix &out);
+	void gradient(Matrix &in, Matrix &out);
+};
+
+Relu::Relu():Activation("Relu") {}
+
+Relu::~Relu(){}
+
+void Relu::call(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	reluKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
+	cudaDeviceSynchronize();
+}
+
+void Relu::gradient(Matrix &in, Matrix &out){
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((in.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	reluGradKernel<<< nBlocks, nThreads >>>(in.getDeviceData(), out.getDeviceData(), in.size);
+	cudaDeviceSynchronize();
+}
+
+__global__ void reluKernel(float *d_in, float *d_out, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		d_out[i] = fmaxf(d_in[i], 0);
+		i += blockDim.x * gridDim.x;
+	}
+}
+
+__global__ void reluGradKernel(float *d_in, float *d_out, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		if(d_in[i] > 0)
+			d_out[i] = 1;
+		else
+			d_out[i] = 0;
+
+		i += blockDim.x * gridDim.x;
+	}
+}
 
 #endif
