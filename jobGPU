@@ -22,12 +22,13 @@
 #$ -q gpushort
 #$ -l gpu=1
 #$ -l memoria_a_usar=1G
-#$ -N MatMul
+#$ -N Cuda
 #
 #cargar variables de entorno para encontrar cuda
 # module load cuda/8.0.61
-module load cuda
+# module load cuda
+module load cuda/10.1.243
 
 #ejecutar el o los binarios con sus respectivos argumentos
-./multmat
+./ejecutable
 
