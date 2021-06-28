@@ -22,29 +22,24 @@ Description:
 
 class Matrix{
 public:
-	int height;
-	int width;
-	size_t size;
-	float* h_elem;
-	float* d_elem;
+	int height, width, size;
+	float *h_elem, *d_elem;
 
 // public:
 	Matrix(int width, int height);
 	~Matrix();
 
-	void print();
-
 	void copyDeviceToHost();
-
+	void copyHostToDevice();
+	void print();
 };
 
 Matrix::Matrix(int height, int width) : height(height), width(width), size(width * height){
-	// size = width * height;
-
 	h_elem = new float[size];
-	int aux[3] = {-1, 0 , 1};
+	// float aux[3] = {-1, 0 , 1};
 	for(size_t i=0; i < size; ++i){
-		h_elem[i] = aux[i%3];
+		h_elem[i] = i;
+		// h_elem[i] = aux[i%3];
 	}
 
 	// Allocacion en device
@@ -61,11 +56,14 @@ void Matrix::copyDeviceToHost(){
 	cudaMemcpy(h_elem, d_elem, size * sizeof(float), cudaMemcpyDeviceToHost);
 }
 
+void Matrix::copyHostToDevice(){
+	cudaMemcpy(d_elem, h_elem, size * sizeof(float), cudaMemcpyHostToDevice );
+}
+
 void Matrix::print(){
 	for(int i=0; i < height; ++i){
-		for(int j=0; j < width; ++j){
-			std::cout << h_elem[i*height + j] << "\t";
-		}
+		for(int j=0; j < width; ++j)
+			std::cout << h_elem[i*width + j] << "\t";
 		std::cout << std::endl;
 	}
 }
@@ -122,45 +120,44 @@ float sigmoid(int x){
 	return 1.0f / (1 + expf(-x));
 }
 
-// __device__ __host__ 
-// float MiFuncion(int i){
-//     // return sin(2*M_PI*i/10.0);
-//     return expf(2*M_PI*i/10.0);
-// }
-
-__global__ void sigmoidKernel(Matrix A, int size){
+__global__ void sigmoidKernel(float* d_e, int size){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	while(i < size){
-		A.d_elem[i] = sigmoid(A.d_elem[i]);
-		// A.d_elem[i] = MiFuncion(A.d_elem[i]);
-		// A.d_elem[i] = MiFuncion(i);
+		d_e[i] = sigmoid(d_e[i]);
 		i += blockDim.x*gridDim.x;
 	}
 }
 
-// __global__ void Tabular(float *d_c, int n){
-// 	// indice de thread mapeado a indice de array 
-// 	int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-// 	//COMPLETAR PARA QUE c[i]=MiFuncion(i)
-// 	//ASEGURARSE DE QUE TODO EL ARRAY ESTE TABULADO CON LA GRILLA LANZADA
-// 	//Y DE QUE NO SE ACCEDAN POSICIONES ILEGALES
-// 	if(i < n)
-// 		d_c[i] = MiFuncion(i);
-// }
 
 
 int main(int argc, const char** argv) {
 
-	Matrix A(5, 2);
+	Matrix A(3, 2);
 
 	A.print();
 
+	std::cout << std::endl;
 
+	// dim3 nThreads(256); // CORREGIR
+	// dim3 nBlocks((A.size + nThreads.x - 1) / nThreads.x); // CORREGIR
 
-    // hello<<<1, 10>>>();  // 1 bloque con 10 hilos
-    // cudaDeviceSynchronize();
+	// if(nBlocks.x>65535)
+	// 	nBlocks.x=65535;	
+	
+	// sigmoidKernel<<< nBlocks, nThreads >>>(A, A.size);
+	// sigmoidKernel<<< 1, 6 >>>(&A, A.size);
+	sigmoidKernel<<< 1, 6 >>>(A.d_elem, A.size);
+	cudaDeviceSynchronize();
+
+	A.print();
+	std::cout << std::endl;
+
+	A.copyDeviceToHost();
+
+	A.print();
+	std::cout << std::endl;
+
 
     return 0;
 }
