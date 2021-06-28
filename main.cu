@@ -24,10 +24,10 @@ int main(int argc, const char** argv) {
 
 	Activation *activacion;
 	// activacion = new Sigmoid;
-	// activacion = new Relu;
+	activacion = new Relu;
 	// activacion = new Linear;
 	// activacion = new Tanh;
-	activacion = new LeakyRelu(0.3);
+	// activacion = new LeakyRelu(0.3);
 
 	std::cout << "A" << std::endl;
 	A.print();
