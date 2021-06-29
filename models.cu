@@ -21,9 +21,11 @@ private:
     
 public:
 	NeuralNetwork();	//Default constructor
+	NeuralNetwork(int width, int height);	//Default constructor
 	~NeuralNetwork();
 
-	void add(Layer *layer);
+	// void add(Layer *layer);
+	void add(std::string type, int nn, std::string act, std::string dist = "uniform", float w = 0.1);
 	// void getLayer(int idx);
 	void fit();
 	void predict();
@@ -31,9 +33,15 @@ public:
 	void backward();
 
 	void print();
+	void printWeights();
 };
 
 NeuralNetwork::NeuralNetwork(){}
+
+NeuralNetwork::NeuralNetwork(int width, int height){
+	Layer *layer = new Input(width,height);
+	layers.push_back(layer);
+}
 
 NeuralNetwork::~NeuralNetwork(){
 	std::vector<Layer*>::iterator itr;
@@ -42,9 +50,26 @@ NeuralNetwork::~NeuralNetwork(){
 	}
 }
 
-void NeuralNetwork::add(Layer *layer){
+// void NeuralNetwork::add(Layer *layer){
+// 	layers.push_back(layer);
+// }
+
+void NeuralNetwork::add(std::string type, int nn, std::string act, std::string dist, float w){
+	Layer *layer;
+
+	if(type == "dense" || type == "Dense"){
+		Layer *last_layer = layers.back();
+		int input_shape = last_layer->getWidth();
+		// layer = new Dense(nn,input_shape, act, dist, w);
+		layer = new Dense(input_shape, nn, act, dist, w);
+	}
+	else
+		throw std::invalid_argument("Invalid layer");
+
 	layers.push_back(layer);
 }
+
+
 
 void NeuralNetwork::fit(){
 	std::cout << "Fit method unimplemented" << std::endl;
@@ -77,6 +102,17 @@ void NeuralNetwork::print(){
 	}
 }
 
+void NeuralNetwork::printWeights(){
+	std::vector<Layer*>::iterator itr;
+	for(itr = layers.begin(); itr != layers.end(); ++itr){
+		(*itr)->printWeights();
+		std::cout << std::endl << std::endl;
+		// std::cout << (*itr)->getName() << " - ";
+		// std::cout << "(" << (*itr)->getHeight() << ",";
+		// std::cout << (*itr)->getWidth()<< ")" << " - ";
+		// std::cout << (*itr)->getActivation() << std::endl;
+	}
+}
 
 
 
