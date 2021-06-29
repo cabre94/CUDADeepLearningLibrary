@@ -39,6 +39,7 @@ Dense Layer
 class Dense : public Layer{
 private:
 	Matrix W;
+	Matrix b;
 	Activation *activation;
 public:
 	Dense(int width, int height, std::string act, std::string dist = "uniform", float w = 0.1);
@@ -50,7 +51,7 @@ public:
 };
 
 Dense::Dense(int width, int height, std::string act, std::string dist, float w)
-	:Layer("Dense"), W(width,height,dist,w) {
+	:Layer("Dense"), W(width,height,dist,w), b(1,height,"ones",0) {
 		if(act == "linear")
 			activation = new Linear;
 		else if(act == "relu")
@@ -70,8 +71,16 @@ Dense::~Dense(){
 }
 
 void Dense::printWeights(){
-	W.print();
+	float *ptr_W = W.getHostData();
+	float *ptr_b = b.getHostData();
+	for(int i=0; i < W.height; ++i){
+		for(int j=0; j < W.width; ++j)
+			std::cout << ptr_W[i*W.width + j] << "\t";
+		std::cout << ptr_b[i] << "\t";
+		std::cout << std::endl;
+	}
 }
+
 
 
 
