@@ -103,102 +103,103 @@ MatrixMulCUDA(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
 }
 
 
+void testRed();
 
-/* parameter settings */
-// dim3 dimsA(1055, 2137, 1);		//The width, height and unused parameters of the matrix 1
-// dim3 dimsB(108, 1055, 1);		//The width, height and unused parameters of the matrix 1
-// const int block_size = 32;
-
-/* General steps such as matrix initialization and memory transfer
-....
-*/
-
-/* Call kernel function calculation */
-// dim3 threads(block_size, block_size);
-// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
-
-// MatrixMulCUDA<block_size> <<<grid, threads >>> (d_C, d_A, d_B,
-// 			dimsA.x, dimsB.x, dimsA.y, dimsB.y);
-
-
-
-
-
-// int main(int argc, const char** argv){
-// 	const int block_size = 32;
+int main(int argc, const char** argv){
+	const int block_size = 32;
 
 	
-// 	Matrix A(3, 5, "uniform");
-// 	Matrix B(5, 4, "uniform");
-// 	Matrix C(3, 4, "ones");
+	Matrix X(3, 2, "uniform");
+	Matrix W(2, 4, "uniform");
+	Matrix b(1, 4, "uniform");
+	Matrix Y(3, 4, "zeros");
 
-// 	std::cout << 2/3 << std::endl;
 	
-// 	// y_pred.copyDeviceToHost();
-// 	// y_true.copyDeviceToHost();
-// 	// dY.copyDeviceToHost();
+	// y_pred.copyDeviceToHost();
+	// y_true.copyDeviceToHost();
+	// dY.copyDeviceToHost();
 
-// 	std::cout << "A" << std::endl; A.print(); std::cout << std::endl;
-// 	std::cout << "B" << std::endl; B.print(); std::cout << std::endl;
-// 	std::cout << "C" << std::endl; C.print(); std::cout << std::endl;
+	std::cout << "X" << std::endl; X.print(); std::cout << std::endl;
+	std::cout << "W" << std::endl; W.print(); std::cout << std::endl;
+	std::cout << "b" << std::endl; b.print(); std::cout << std::endl;
+	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
 	
-// 	int dev;
-// 	cudaGetDevice(&dev);
+	// int dev;
+	// cudaGetDevice(&dev);
 	
-// 	cudaDeviceProp deviceProp;
-//     cudaGetDeviceProperties(&deviceProp, dev);
+	// cudaDeviceProp deviceProp;
+    // cudaGetDeviceProperties(&deviceProp, dev);
 	
-// 	// dim3 nThreads(256);
-// 	dim3 nThreads(deviceProp.maxThreadsDim[0]);
-// 	dim3 nBlocks((C.size + nThreads.x - 1) / nThreads.x);
-// 	if(nBlocks.x > deviceProp.maxGridSize[0]){
-// 		nBlocks.x = deviceProp.maxGridSize[0];
-// 	}
+	// // dim3 nThreads(256);
+	// dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	// dim3 nBlocks((C.size + nThreads.x - 1) / nThreads.x);
+	// if(nBlocks.x > deviceProp.maxGridSize[0]){
+	// 	nBlocks.x = deviceProp.maxGridSize[0];
+	// }
 	
-// 	// MatMulCublas(A, B, C);
-// 	// AdotBKernel<<< 256, 1024 >>>(
-// 	// 	A.getDeviceData(),
-// 	// 	B.getDeviceData(),
-// 	// 	C.getDeviceData(),
-// 	// 	A.getWidth(),
-// 	// 	A.getHeight(),
-// 	// 	B.getWidth(),
-// 	// 	B.getHeight()
-// 	// );
-// 	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-// 	// dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
+	// MatMulCublas(A, B, C);
+	// AdotBKernel<<< 256, 1024 >>>(
+	// 	A.getDeviceData(),
+	// 	B.getDeviceData(),
+	// 	C.getDeviceData(),
+	// 	A.getWidth(),
+	// 	A.getHeight(),
+	// 	B.getWidth(),
+	// 	B.getHeight()
+	// );
+	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+	// dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
 
-// 	dim3 threads(block_size, block_size);
-// 	dim3 grid((B.width -1) / threads.x + 1, (A.height - 1) / threads.y + 1);
-// 	// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
-
-// 	MatrixMulCUDA<block_size> <<<grid, threads >>> (
-// 		A.getDeviceData(),
-// 		B.getDeviceData(),
-// 		C.getDeviceData(),
-// 		A.width,
-// 		B.width,
-// 		A.height,
-// 		B.height
-// 	);
-
-
-
-// 	cudaDeviceSynchronize();
-// 	C.copyDeviceToHost();
+	dim3 threads(block_size, block_size);
+	dim3 grid((W.width -1) / threads.x + 1, (X.height - 1) / threads.y + 1);
+	// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
 	
-// 	std::cout << "C" << std::endl; C.print(); std::cout << std::endl;
+	XdotWplusBias<block_size> <<<grid, threads >>> (
+		X.getDeviceData(),
+		W.getDeviceData(),
+		Y.getDeviceData(),
+		X.getWidth(),
+		W.getWidth(),
+		X.getHeight(),
+		W.getHeight(),
+		b.getDeviceData()
+	);
+	cudaDeviceSynchronize();
+
+
+
+	Y.copyDeviceToHost();
+	
+	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
 	
 	
 	
 	
 	
-// 	return 0;
-// }
+	return 0;
+}
 
 
 
 
+void testRed(){
+
+	NeuralNetwork nn(2,3);
+	nn.add("Dense",3,"linear");
+	nn.add("Dense",2,"relu");
+
+	nn.print();
+
+	nn.printWeights();
+
+}
+
+
+// Matrix A(2,3);
+// A.print();
+// std::cout << std::endl << std::flush;
+// A.initialize(4,4);
+// A.print();
 
 
 
@@ -289,48 +290,8 @@ MatrixMulCUDA(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
 
 
 
-int main(int argc, const char** argv){
-
-	Matrix A(2,3);
-	A.print();
-	std::cout << std::endl << std::flush;
-	A.initialize(4,4);
-	A.print();
 
 
-
-	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << std::endl;
-	
-		// Dense capa(2,3,"relu");
-	
-	// capa.printWeights();
-
-	// NeuralNetwork nn;
-	NeuralNetwork nn(2,3);
-	// nn.add(new Input(2,3));
-	// nn.add(new Input(2,3));
-	// nn.add(new Dense(2,3,"linear"));
-	// nn.add(new Dense(2,3,"relu"));
-	// nn.add(new Dense(2,3,"sigmoid"));
-	// nn.add(new Dense(2,3,"tanh"));
-	// nn.add(new Dense(2,3,"leakyRelu"));
-
-	nn.add("Dense",3,"linear");
-	nn.add("Dense",4,"relu");
-	nn.add("Dense",5,"sigmoid");
-	nn.add("Dense",4,"tanh");
-	nn.add("Dense",3,"leakyRelu");
-
-	nn.print();
-
-	nn.printWeights();
-
-
-
-	return 0;
-}
 
 /*
 int main(int argc, const char** argv) {
