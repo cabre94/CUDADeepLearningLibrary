@@ -47,6 +47,15 @@ Matrix::Matrix(int height, int width, std::string dist, float w)
 		for(int i=0; i < size; ++i){
 			h_elem[i] = distribution(mt);
 		}
+	}else if(dist == "ones"){
+		for(int i=0; i < size; ++i){
+			h_elem[i] = 1.0;
+		}
+	}else if(dist == "zeros"){
+		for(int i=0; i < size; ++i){
+			h_elem[i] = 0.0;		}
+	}else{
+		throw std::invalid_argument("Invalid Weight initialization");
 	}
 
 	// Allocacion en device
