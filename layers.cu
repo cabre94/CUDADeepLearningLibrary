@@ -23,6 +23,9 @@ public:
 	// virtual void call(Matrix &in, Matrix &out) = 0;
 	// virtual void gradient(Matrix &in, Matrix &out) = 0;
 	virtual void printWeights() = 0;
+	virtual int getWidth() = 0;
+	virtual int getHeight() = 0;
+	virtual std::string getActivation() = 0;
 };
 
 Layer::Layer(std::string name_) : name(name_) {}
@@ -48,6 +51,9 @@ public:
 	// void call(Matrix &in, Matrix &out);
 	// void gradient(Matrix &in, Matrix &out);
 	void printWeights();
+	int getWidth();
+	int getHeight();
+	std::string getActivation();
 };
 
 Dense::Dense(int width, int height, std::string act, std::string dist, float w)
@@ -81,6 +87,14 @@ void Dense::printWeights(){
 	}
 }
 
+int Dense::getWidth(){return W.width;}
+
+int Dense::getHeight(){return W.height;}
+
+std::string Dense::getActivation(){
+	return activation->getName();
+}
+
 
 /* ----------------------------
 Input Layer
@@ -96,6 +110,9 @@ public:
 	// void call(Matrix &in, Matrix &out);
 	// void gradient(Matrix &in, Matrix &out);
 	void printWeights();
+	int getWidth();
+	int getHeight();
+	std::string getActivation();
 };
 
 Input::Input(int width, int height):Layer("Input"), out_width(width), out_height(height){}
@@ -106,6 +123,11 @@ void Input::printWeights(){
 	std::cout << "Input Layer?" << std::endl;
 }
 
+int Input::getWidth(){return out_width;}
+
+int Input::getHeight(){return out_height;}
+
+std::string Input::getActivation(){return "None";}
 
 
 
