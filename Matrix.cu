@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <random>
 
+__global__ void copyFromTo(float *from, float *to, int size);
 
 class Matrix{
 public:
@@ -31,7 +32,8 @@ public:
 	int getHeight();
 	int getWidth();
 
-	void initialize(int height, int width, std::string dist = "uniform", float w = 1);
+	void initialize(int height, int width, std::string dist = "zeros", float w = 1);
+	void copyDeviceDataFromAnother(Matrix &from);
 };
 
 Matrix::Matrix(){
@@ -155,6 +157,44 @@ void Matrix::initialize(int height_, int width_, std::string dist, float w){
 	cudaMemcpy( d_elem, h_elem, size * sizeof(float), cudaMemcpyHostToDevice);
 
 	allocated = true;
+}
+
+void Matrix::copyDeviceDataFromAnother(Matrix &from){
+	// Asumo dimensiones correctas
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+	
+	// dim3 nThreads(256);
+	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	dim3 nBlocks((from.size + nThreads.x - 1) / nThreads.x);
+	if(nBlocks.x > deviceProp.maxGridSize[0]){
+		nBlocks.x = deviceProp.maxGridSize[0];
+	}
+	
+	copyFromTo<<< nBlocks, nThreads >>>(from.getDeviceData(), d_elem, from.size);
+	cudaDeviceSynchronize();
+	// Aca Host y Device son distintos
+}
+
+
+
+
+/* ----------------------------
+Kernels
+---------------------------- */
+
+
+__global__ void copyFromTo(float *from, float *to, int size){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	while(i < size){
+		to[i] = from[i];
+
+		i += blockDim.x * gridDim.x;
+	}
 }
 
 
