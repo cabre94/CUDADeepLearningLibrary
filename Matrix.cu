@@ -24,6 +24,9 @@ public:
 
 	float* getHostData();
 	float* getDeviceData();
+
+	int getHeight();
+	int getWidth();
 };
 
 
@@ -50,11 +53,11 @@ Matrix::Matrix(int height, int width, std::string dist, float w)
 		}
 	}else if(dist == "ones"){
 		for(int i=0; i < size; ++i){
-			h_elem[i] = 1.0;
+			h_elem[i] = 1.0f;
 		}
 	}else if(dist == "zeros"){
 		for(int i=0; i < size; ++i){
-			h_elem[i] = 0.0;		}
+			h_elem[i] = 0.0f;		}
 	}else{
 		throw std::invalid_argument("Invalid Weight initialization");
 	}
@@ -92,5 +95,11 @@ float* Matrix::getHostData(){
 float* Matrix::getDeviceData(){
 	return d_elem;
 }
+
+int Matrix::getHeight(){return height;}
+
+int Matrix::getWidth(){return width;}
+
+
 
 #endif
