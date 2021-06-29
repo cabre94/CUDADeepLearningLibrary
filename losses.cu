@@ -61,7 +61,7 @@ float MSE::call(Matrix &y_pred, Matrix &y_true){
 
 	// y_true: asumo que ya viene como one-hot-encoder
 	// y_true deberian ser solo 0 y 1
-	// widht: numero de clases
+	// width: numero de clases
 	// height: tamaño del bacth
 	float cost = 0;
 	for(int i=0; i < y_pred.size; ++i){
