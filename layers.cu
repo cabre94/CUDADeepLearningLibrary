@@ -98,7 +98,7 @@ public:
 	void printWeights();
 };
 
-Input::Input(int width, int height):Layer("Input") : out_width(width), out_height(height){}
+Input::Input(int width, int height):Layer("Input"), out_width(width), out_height(height){}
 
 Input::~Input(){}
 
