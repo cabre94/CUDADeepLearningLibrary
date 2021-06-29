@@ -124,77 +124,77 @@ MatrixMulCUDA(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
 
 
 
-int main(int argc, const char** argv){
-	const int block_size = 32;
+// int main(int argc, const char** argv){
+// 	const int block_size = 32;
 
 	
-	Matrix A(3, 5, "uniform");
-	Matrix B(5, 4, "uniform");
-	Matrix C(3, 4, "ones");
+// 	Matrix A(3, 5, "uniform");
+// 	Matrix B(5, 4, "uniform");
+// 	Matrix C(3, 4, "ones");
 
-	std::cout << 2/3 << std::endl;
+// 	std::cout << 2/3 << std::endl;
 	
-	// y_pred.copyDeviceToHost();
-	// y_true.copyDeviceToHost();
-	// dY.copyDeviceToHost();
+// 	// y_pred.copyDeviceToHost();
+// 	// y_true.copyDeviceToHost();
+// 	// dY.copyDeviceToHost();
 
-	std::cout << "A" << std::endl; A.print(); std::cout << std::endl;
-	std::cout << "B" << std::endl; B.print(); std::cout << std::endl;
-	std::cout << "C" << std::endl; C.print(); std::cout << std::endl;
+// 	std::cout << "A" << std::endl; A.print(); std::cout << std::endl;
+// 	std::cout << "B" << std::endl; B.print(); std::cout << std::endl;
+// 	std::cout << "C" << std::endl; C.print(); std::cout << std::endl;
 	
-	int dev;
-	cudaGetDevice(&dev);
+// 	int dev;
+// 	cudaGetDevice(&dev);
 	
-	cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, dev);
+// 	cudaDeviceProp deviceProp;
+//     cudaGetDeviceProperties(&deviceProp, dev);
 	
-	// dim3 nThreads(256);
-	dim3 nThreads(deviceProp.maxThreadsDim[0]);
-	dim3 nBlocks((C.size + nThreads.x - 1) / nThreads.x);
-	if(nBlocks.x > deviceProp.maxGridSize[0]){
-		nBlocks.x = deviceProp.maxGridSize[0];
-	}
+// 	// dim3 nThreads(256);
+// 	dim3 nThreads(deviceProp.maxThreadsDim[0]);
+// 	dim3 nBlocks((C.size + nThreads.x - 1) / nThreads.x);
+// 	if(nBlocks.x > deviceProp.maxGridSize[0]){
+// 		nBlocks.x = deviceProp.maxGridSize[0];
+// 	}
 	
-	// MatMulCublas(A, B, C);
-	// AdotBKernel<<< 256, 1024 >>>(
-	// 	A.getDeviceData(),
-	// 	B.getDeviceData(),
-	// 	C.getDeviceData(),
-	// 	A.getWidth(),
-	// 	A.getHeight(),
-	// 	B.getWidth(),
-	// 	B.getHeight()
-	// );
-	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	// dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
+// 	// MatMulCublas(A, B, C);
+// 	// AdotBKernel<<< 256, 1024 >>>(
+// 	// 	A.getDeviceData(),
+// 	// 	B.getDeviceData(),
+// 	// 	C.getDeviceData(),
+// 	// 	A.getWidth(),
+// 	// 	A.getHeight(),
+// 	// 	B.getWidth(),
+// 	// 	B.getHeight()
+// 	// );
+// 	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+// 	// dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
 
-	dim3 threads(block_size, block_size);
-	dim3 grid((B.width -1) / threads.x + 1, (A.height - 1) / threads.y + 1);
-	// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
+// 	dim3 threads(block_size, block_size);
+// 	dim3 grid((B.width -1) / threads.x + 1, (A.height - 1) / threads.y + 1);
+// 	// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
 
-	MatrixMulCUDA<block_size> <<<grid, threads >>> (
-		A.getDeviceData(),
-		B.getDeviceData(),
-		C.getDeviceData(),
-		A.width,
-		B.width,
-		A.height,
-		B.height
-	);
+// 	MatrixMulCUDA<block_size> <<<grid, threads >>> (
+// 		A.getDeviceData(),
+// 		B.getDeviceData(),
+// 		C.getDeviceData(),
+// 		A.width,
+// 		B.width,
+// 		A.height,
+// 		B.height
+// 	);
 
 
 
-	cudaDeviceSynchronize();
-	C.copyDeviceToHost();
+// 	cudaDeviceSynchronize();
+// 	C.copyDeviceToHost();
 	
-	std::cout << "C" << std::endl; C.print(); std::cout << std::endl;
-	
-	
+// 	std::cout << "C" << std::endl; C.print(); std::cout << std::endl;
 	
 	
 	
-	return 0;
-}
+	
+	
+// 	return 0;
+// }
 
 
 
@@ -289,26 +289,48 @@ int main(int argc, const char** argv){
 
 
 
-// int main(int argc, const char** argv){
+int main(int argc, const char** argv){
+
+	Matrix A(2,3);
+	A.print();
+	std::cout << std::endl << std::flush;
+	A.initialize(4,4);
+	A.print();
+
+
+
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << std::endl;
 	
-	// 	// Dense capa(2,3,"relu");
+		// Dense capa(2,3,"relu");
 	
-// 	// capa.printWeights();
+	// capa.printWeights();
 
-// 	NeuralNetwork nn;
-// 	nn.add(new Input(2,3));
-// 	nn.add(new Dense(2,3,"linear"));
-// 	nn.add(new Dense(2,3,"relu"));
-// 	nn.add(new Dense(2,3,"sigmoid"));
-// 	nn.add(new Dense(2,3,"tanh"));
-// 	nn.add(new Dense(2,3,"leakyRelu"));
+	// NeuralNetwork nn;
+	NeuralNetwork nn(2,3);
+	// nn.add(new Input(2,3));
+	// nn.add(new Input(2,3));
+	// nn.add(new Dense(2,3,"linear"));
+	// nn.add(new Dense(2,3,"relu"));
+	// nn.add(new Dense(2,3,"sigmoid"));
+	// nn.add(new Dense(2,3,"tanh"));
+	// nn.add(new Dense(2,3,"leakyRelu"));
 
-// 	nn.print();
+	nn.add("Dense",3,"linear");
+	nn.add("Dense",4,"relu");
+	nn.add("Dense",5,"sigmoid");
+	nn.add("Dense",4,"tanh");
+	nn.add("Dense",3,"leakyRelu");
+
+	nn.print();
+
+	nn.printWeights();
 
 
 
-// 	return 0;
-// }
+	return 0;
+}
 
 /*
 int main(int argc, const char** argv) {
