@@ -15,7 +15,7 @@ public:
 	std::string dist;
 
 // public:
-	Matrix(int width, int height, std::string dist = "uniform", float w = 1);
+	Matrix(int height, int width, std::string dist = "uniform", float w = 1);
 	~Matrix();
 
 	void copyDeviceToHost();
@@ -32,12 +32,6 @@ Matrix::Matrix(int height, int width, std::string dist, float w)
 	dist = dist;
 	h_elem = new float[size];
 	
-	// float aux[3] = {-2, 0 , 2};
-	// for(int i=0; i < size; ++i){
-	// 	// h_elem[i] = i;
-	// 	// h_elem[i] = 0;
-	// 	h_elem[i] = aux[i%3];
-	// }
 	std::random_device rd;
 	std::mt19937 mt(rd());
 
