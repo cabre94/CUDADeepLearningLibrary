@@ -61,7 +61,7 @@ void NeuralNetwork::forward(){
 	return;
 }
 
-void NeuralNetwork::fit(){
+void NeuralNetwork::backward(){
 	std::cout << "Backward method unimplemented" << std::endl;
 	return;
 }
