@@ -36,10 +36,18 @@ NeuralNetwork::~NeuralNetwork(){
 	}
 }
 
+void NeuralNetwork::add(Layer *layer){
+	layers.push_back(layer);
+}
+
 void NeuralNetwork::print(){
-	std::vector< int* >::iterator itr;
+	std::cout << "Neural Network Architecture" << std::endl;
+	std::vector<Layer*>::iterator itr;
 	for(itr = layers.begin(); itr != layers.end(); ++itr){
-		(*itr)->getName();
+		std::cout << (*itr)->getName() << " - ";
+		std::cout << "(" << (*itr)->getHeight() << ",";
+		std::cout << (*itr)->getWidth()<< ")" << " - ";
+		std::cout << (*itr)->getActivation() << std::endl;
 	}
 }
 
