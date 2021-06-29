@@ -15,15 +15,21 @@
 class NeuralNetwork{
 private:
     std::vector<Layer*> layers;
+	// optimizador
+	// loss
+	// metrica
     
 public:
 	NeuralNetwork();	//Default constructor
 	~NeuralNetwork();
-	
-	// std::string getName();
-	// virtual void call(Matrix &in, Matrix &out) = 0;
-	// virtual void gradient(Matrix &in, Matrix &out) = 0;
+
 	void add(Layer *layer);
+	// void getLayer(int idx);
+	void fit();
+	void predict();
+	void forward();
+	void backward();
+
 	void print();
 };
 
@@ -38,6 +44,26 @@ NeuralNetwork::~NeuralNetwork(){
 
 void NeuralNetwork::add(Layer *layer){
 	layers.push_back(layer);
+}
+
+void NeuralNetwork::fit(){
+	std::cout << "Fit method unimplemented" << std::endl;
+	return;
+}
+
+void NeuralNetwork::predict(){
+	std::cout << "Predict method unimplemented" << std::endl;
+	return;
+}
+
+void NeuralNetwork::forward(){
+	std::cout << "Forward method unimplemented" << std::endl;
+	return;
+}
+
+void NeuralNetwork::fit(){
+	std::cout << "Backward method unimplemented" << std::endl;
+	return;
 }
 
 void NeuralNetwork::print(){
