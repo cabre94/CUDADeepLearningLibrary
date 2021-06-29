@@ -82,6 +82,31 @@ void Dense::printWeights(){
 }
 
 
+/* ----------------------------
+Input Layer
+---------------------------- */
+
+class Input : public Layer{
+private:
+	int out_width, out_height;
+public:
+	Input(int width, int height);
+    ~Input();
+	
+	// void call(Matrix &in, Matrix &out);
+	// void gradient(Matrix &in, Matrix &out);
+	void printWeights();
+};
+
+Input::Input(int width, int height):Layer("Input") : out_width(width), out_height(height){}
+
+Input::~Input(){}
+
+void Input::printWeights(){
+	std::cout << "Input Layer?" << std::endl;
+}
+
+
 
 
 
