@@ -12,8 +12,13 @@
 Kernel
 ---------------------------- */
 
+// template<int BLOCK_SIZE> __global__ void
+// XdotW(float* A, float* B, float* C, int wA, int wB, int hA, int hB);
+
 template<int BLOCK_SIZE> __global__ void
-XdotW(float* A, float* B, float* C, int wA, int wB, int hA, int hB);
+XdotWplusBias(float* A, float* B, float* C, int wA, int wB, int hA, int hB, float *bias);
+
+
 
 /* ----------------------------
 Layer class
@@ -34,7 +39,9 @@ public:
 	virtual int getHeight() = 0;
 	virtual std::string getActivation() = 0;
 
-	// virtual void forward(Matrix &X) = 0;
+	virtual void forward(Matrix &X) = 0;
+	
+	virtual Matrix& getOutput() = 0;
 };
 
 Layer::Layer(std::string name_) : name(name_) {}
@@ -53,6 +60,7 @@ private:
 	Matrix W;
 	Matrix b;
 	Matrix Y; // Y = input*W + b -> 
+	Matrix dY; // Y = input*W + b -> 
 	// Matrix Output;
 	Activation *activation;
 public:
@@ -65,6 +73,10 @@ public:
 	int getWidth();
 	int getHeight();
 	std::string getActivation();
+
+	void forward(Matrix &X);
+
+	Matrix& getOutput();
 };
 
 Dense::Dense(int input_shape, int output_shape, std::string act, std::string dist, float w)
@@ -81,7 +93,7 @@ Dense::Dense(int input_shape, int output_shape, std::string act, std::string dis
 			activation = new LeakyRelu();
 		else
 			throw std::invalid_argument("Invalid activation");
-	}
+}
 
 Dense::~Dense(){
 	delete activation;
@@ -106,6 +118,36 @@ std::string Dense::getActivation(){
 	return activation->getName();
 }
 
+void Dense::forward(Matrix &X){
+	// Tengo que hacer X*W
+	const int block_size = 32;
+
+	dim3 threads(block_size, block_size);
+	dim3 grid((W.width -1) / threads.x + 1, (X.height - 1) / threads.y + 1);
+
+	XdotWplusBias<block_size> <<<grid, threads >>> (
+		X.getDeviceData(),
+		W.getDeviceData(),
+		Y.getDeviceData(),
+		X.getWidth(),
+		W.getWidth(),
+		X.getHeight(),
+		W.getHeight(),
+		b.getDeviceData()
+	);
+
+	cudaDeviceSynchronize();
+
+	// Sumarle el bias y guardarlo en Y
+	activation->call(Y, Y);
+
+	cudaDeviceSynchronize();
+	// En este punto, Y deberia estar listo para la siguiente capa
+
+	return;
+}
+
+Matrix& Dense::getOutput(){return Y;}
 
 /* ----------------------------
 Input Layer
@@ -114,7 +156,9 @@ Input Layer
 class Input : public Layer{
 private:
 	int width, height; // salida, entrada (entrada no la se a esta altiura)
-	Matrix Datos;
+	// Matrix Datos;
+	Matrix Y;
+	Matrix dY;
 public:
 	Input(int width, int height = -1);
     ~Input();
@@ -125,23 +169,27 @@ public:
 	int getWidth();
 	int getHeight();
 	std::string getActivation();
+
+	void forward(Matrix &X);
+
+	Matrix& getOutput();
 };
 
 // Input::Input(int width, int height):Layer("Input"), width(width), height(-1){}
 
 //#! Capaz cambie esto
 Input::Input(int width, int height)
-	: Layer("Input"), width(width), height(-1), Datos(height, width){}
+	: Layer("Input"), width(width), height(-1), Y(height, width){}
 
 
 Input::~Input(){}
 
 void Input::printWeights(){
 	std::cout << "Input Layer - Serian los datos" << std::endl;
-	float *ptr_W = Datos.getHostData();
-	for(int i=0; i < Datos.height; ++i){
-		for(int j=0; j < Datos.width; ++j)
-			std::cout << ptr_W[i*Datos.width + j] << "\t";
+	float *ptr_W = Y.getHostData();
+	for(int i=0; i < Y.height; ++i){
+		for(int j=0; j < Y.width; ++j)
+			std::cout << ptr_W[i*Y.width + j] << "\t";
 		std::cout << std::endl;
 	}
 }
@@ -152,11 +200,33 @@ int Input::getHeight(){return height;}
 
 std::string Input::getActivation(){return "None";}
 
+void Input::forward(Matrix &X){
+	// Esta funcion creo que deberia inicializar los datos a la matrix correspondiente
+	// ACA ASUMO QUE YA TIENEN EL MISMO TAMAÑO
+	// No hay que cagarla con los constructurores
+	std::cout << "Unimplemted - Input Layer" << std::endl;
 
-// Kernel
+	if((X.getHeight() != Y.getHeight()) || (X.getWidth() != Y.getWidth())){
+		Y.initialize(X.getHeight(), X.getWidth());
+		//  Matrix::initialize(int height_, int width_, std::string dist, float w)
+	}
+	Y.copyDeviceDataFromAnother(X);
+}
+
+Matrix& Input::getOutput(){return Y;}
+
+
+
+
+
+/* ----------------------------
+Kernels
+---------------------------- */
+
 // Kernel modified from https://www.programmersought.com/article/13436584263/
 template<int BLOCK_SIZE> __global__ void
-XdotW(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
+XdotWplusBias(float* A, float* B, float* C, int wA, int wB, int hA, int hB, float *bias){
+// XdotW(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
 	//Block index
 	int bx = blockIdx.x;
 	int by = blockIdx.y;
@@ -230,9 +300,10 @@ XdotW(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
 	}
 
 	//Satisfy the elements within the row and column constraints to calculate the product and sum
-	if (ty < subAh && tx < subBw)
-	{
-		C[by * BLOCK_SIZE * wB + bx * BLOCK_SIZE + ty * wB + tx] = Csub;
+	if (ty < subAh && tx < subBw)	{
+		// C[by * BLOCK_SIZE * wB + bx * BLOCK_SIZE + ty * wB + tx] = Csub;
+		// C[by * BLOCK_SIZE * wB + bx * BLOCK_SIZE + ty * wB + tx] = Csub + bias[by*BLOCK_SIZE+ty]; //row
+		C[by * BLOCK_SIZE * wB + bx * BLOCK_SIZE + ty * wB + tx] = Csub + bias[bx*BLOCK_SIZE+tx]; //col
 	}	
 }
 
