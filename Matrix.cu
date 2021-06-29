@@ -22,6 +22,7 @@ public:
 	void copyHostToDevice();
 	void print();
 
+	float* getHostData();
 	float* getDeviceData();
 };
 
@@ -82,6 +83,10 @@ void Matrix::print(){
 			std::cout << h_elem[i*width + j] << "\t";
 		std::cout << std::endl;
 	}
+}
+
+float* Matrix::getHostData(){
+	return h_elem;
 }
 
 float* Matrix::getDeviceData(){
