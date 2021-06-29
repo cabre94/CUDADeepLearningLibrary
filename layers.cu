@@ -42,6 +42,7 @@ public:
 	virtual void forward(Matrix &X) = 0;
 	
 	virtual Matrix& getOutput() = 0;
+	virtual Matrix& getGradOutput() = 0;
 };
 
 Layer::Layer(std::string name_) : name(name_) {}
@@ -77,6 +78,7 @@ public:
 	void forward(Matrix &X);
 
 	Matrix& getOutput();
+	Matrix& getGradOutput();
 };
 
 Dense::Dense(int input_shape, int output_shape, std::string act, std::string dist, float w)
@@ -149,6 +151,8 @@ void Dense::forward(Matrix &X){
 
 Matrix& Dense::getOutput(){return Y;}
 
+Matrix& Dense::getGradOutput(){return dY;}
+
 /* ----------------------------
 Input Layer
 ---------------------------- */
@@ -158,7 +162,7 @@ private:
 	int width, height; // salida, entrada (entrada no la se a esta altiura)
 	// Matrix Datos;
 	Matrix Y;
-	Matrix dY;
+	Matrix dY;	// Not needed
 public:
 	Input(int width, int height = -1);
     ~Input();
@@ -173,6 +177,7 @@ public:
 	void forward(Matrix &X);
 
 	Matrix& getOutput();
+	Matrix& getGradOutput();
 };
 
 // Input::Input(int width, int height):Layer("Input"), width(width), height(-1){}
@@ -215,7 +220,7 @@ void Input::forward(Matrix &X){
 
 Matrix& Input::getOutput(){return Y;}
 
-
+Matrix& Input::getGradOutput(){return dY;}
 
 
 
