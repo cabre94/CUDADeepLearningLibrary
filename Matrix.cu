@@ -25,6 +25,7 @@ public:
 	void copyDeviceToHost();
 	void copyHostToDevice();
 	void print();
+	void printDimensions();
 
 	float* getHostData();
 	float* getDeviceData();
@@ -98,6 +99,10 @@ void Matrix::print(){
 			std::cout << h_elem[i*width + j] << "\t";
 		std::cout << std::endl;
 	}
+}
+
+void Matrix::printDimensions(){
+	std::cout << "(" << height << "," << width << ")";
 }
 
 float* Matrix::getHostData(){
