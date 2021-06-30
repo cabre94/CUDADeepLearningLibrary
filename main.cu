@@ -105,7 +105,39 @@ MatrixMulCUDA(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
 
 void testRed();
 
+void testMatrixMulCUDA();
+
+
+
+
 int main(int argc, const char** argv){
+	
+	testRed();
+
+
+
+	return 0;
+}
+
+
+
+void testRed(){
+
+	NeuralNetwork nn(2,3);
+	nn.add("Dense",3,"linear");
+	nn.add("Dense",2,"relu");
+
+	// nn.print();
+
+	// nn.printWeights();
+
+	nn.setBacthSize(10);
+	nn.printAllDimensions();
+
+}
+
+
+void testMatrixMulCUDA(){
 	const int block_size = 32;
 
 	
@@ -172,27 +204,29 @@ int main(int argc, const char** argv){
 	
 	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
 	
-	
-	
-	
-	
-	return 0;
 }
 
 
 
 
-void testRed(){
 
-	NeuralNetwork nn(2,3);
-	nn.add("Dense",3,"linear");
-	nn.add("Dense",2,"relu");
 
-	nn.print();
 
-	nn.printWeights();
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Matrix A(2,3);
