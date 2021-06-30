@@ -41,6 +41,7 @@ public:
 
 	virtual void forward(Matrix &X) = 0;
 	
+	virtual Matrix& getW() = 0;
 	virtual Matrix& getOutput() = 0;
 	virtual Matrix& getGradOutput() = 0;
 };
@@ -77,6 +78,7 @@ public:
 
 	void forward(Matrix &X);
 
+	Matrix& getW();
 	Matrix& getOutput();
 	Matrix& getGradOutput();
 };
@@ -149,6 +151,8 @@ void Dense::forward(Matrix &X){
 	return;
 }
 
+Matrix& Dense::getW(){return W;}
+
 Matrix& Dense::getOutput(){return Y;}
 
 Matrix& Dense::getGradOutput(){return dY;}
@@ -161,6 +165,7 @@ class Input : public Layer{
 private:
 	int width, height; // salida, entrada (entrada no la se a esta altiura)
 	// Matrix Datos;
+	Matrix W;	// Not needed
 	Matrix Y;
 	Matrix dY;	// Not needed
 public:
@@ -176,6 +181,7 @@ public:
 
 	void forward(Matrix &X);
 
+	Matrix& getW();
 	Matrix& getOutput();
 	Matrix& getGradOutput();
 };
@@ -184,7 +190,7 @@ public:
 
 //#! Capaz cambie esto
 Input::Input(int width, int height)
-	: Layer("Input"), width(width), height(-1), Y(height, width){}
+	: Layer("Input"), width(width), height(-1), Y(height, width), W(1,1){}
 
 
 Input::~Input(){}
@@ -217,6 +223,8 @@ void Input::forward(Matrix &X){
 	}
 	Y.copyDeviceDataFromAnother(X);
 }
+
+Matrix& Input::getW(){return W;}
 
 Matrix& Input::getOutput(){return Y;}
 
