@@ -18,6 +18,9 @@ private:
 	// optimizador
 	// loss
 	// metrica
+	std::vector<float> loss_log;
+	std::vector<float> acc_log;
+	int bacth_size;
     
 public:
 	NeuralNetwork();	//Default constructor
@@ -34,6 +37,9 @@ public:
 
 	void print();
 	void printWeights();
+	void printAllDimensions();
+
+	void setBacthSize(int bacth_size);
 };
 
 NeuralNetwork::NeuralNetwork(){}
@@ -71,7 +77,8 @@ void NeuralNetwork::add(std::string type, int nn, std::string act, std::string d
 
 
 
-void NeuralNetwork::fit(){
+void NeuralNetwork::fit(int bacth_size_){
+	setBacthSize(bacth_size_);
 	std::cout << "Fit method unimplemented" << std::endl;
 	return;
 }
@@ -104,15 +111,45 @@ void NeuralNetwork::print(){
 
 void NeuralNetwork::printWeights(){
 	std::vector<Layer*>::iterator itr;
+
 	for(itr = layers.begin(); itr != layers.end(); ++itr){
 		(*itr)->printWeights();
 		std::cout << std::endl << std::endl;
-		// std::cout << (*itr)->getName() << " - ";
-		// std::cout << "(" << (*itr)->getHeight() << ",";
-		// std::cout << (*itr)->getWidth()<< ")" << " - ";
-		// std::cout << (*itr)->getActivation() << std::endl;
 	}
 }
+
+void NeuralNetwork::printAllDimensions(){
+	std::vector<Layer*>::iterator itr;
+
+	for(itr = layers.begin(); itr != layers.end(); ++itr){
+		std::cout << (*itr)->getName() << " - ";
+		// W
+		std::cout << "W" << " - ";
+		(*itr)->getW().printDimensions();
+		// Y
+		std::cout << "Y" << " - ";
+		(*itr)->getOutput().printDimensions();
+		// dY
+		std::cout << "dy" << " - ";
+		(*itr)->getGradOutput().printDimensions();
+		std::cout << std::endl;
+	}
+
+}
+
+void NeuralNetwork::setBacthSize(int bacth_size_){
+	bacth_size = bacth_size_;
+	std::vector<Layer*>::iterator itr;
+
+	for(itr = layers.begin(); itr != layers.end(); ++itr){
+		int out_dim = (*itr)->getWidth();
+
+		(*itr)->getOutput().initialize(bacth_size, out_dim);
+		(*itr)->getGradOutput().initialize(bacth_size, out_dim);
+	}
+}
+
+
 
 
 
