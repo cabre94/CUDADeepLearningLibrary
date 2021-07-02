@@ -131,7 +131,7 @@ void testRed(){
 
 	// nn.printWeights();
 
-	nn.setBacthSize(10);
+	nn.setBatchSize(10);
 	nn.printAllDimensions();
 
 }
