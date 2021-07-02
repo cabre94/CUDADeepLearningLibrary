@@ -4,23 +4,29 @@
 #include <iostream>
 #include <string>
 #include <stdio.h>
+#include <vector>       // std::vector
 #include "Matrix.cu"
 #include "Activation.cu"
 #include "layers.cu"
 #include "losses.cu"
-#include "optimizers.cu"
+#include <algorithm>    // std::random_shuffle
+// #include "optimizers.cu"
 #include "metrics.cu"
 
+class Optimizer;
 
 class NeuralNetwork{
-private:
+public:
+// private:
     std::vector<Layer*> layers;
 	// optimizador
-	// loss
+	Loss *loss; // loss
 	// metrica
-	std::vector<float> loss_log;
-	std::vector<float> acc_log;
-	int bacth_size;
+	int batch_size;
+	std::vector<float> loss_log, val_loss_log;
+	std::vector<float> acc_log, val_acc_log;
+
+	Matrix y, val_y;
     
 public:
 	NeuralNetwork();	//Default constructor
@@ -28,18 +34,24 @@ public:
 	~NeuralNetwork();
 
 	// void add(Layer *layer);
+	void setLoss(std::string l="MSE");
 	void add(std::string type, int nn, std::string act, std::string dist = "uniform", float w = 0.1);
 	// void getLayer(int idx);
-	void fit();
+	// void fit(int epochs, int batch_size_ = 1);
+	void fit(Matrix &X, Matrix &Y, int epochs, int batch_size_ = 1);
 	void predict();
-	void forward();
+	void forward(Matrix &X);
 	void backward();
 
 	void print();
 	void printWeights();
 	void printAllDimensions();
 
-	void setBacthSize(int bacth_size);
+	void setBatchSize(int batch_size);
+
+	Loss* getLoss();
+	std::vector<Layer*>& getLayers();
+
 };
 
 NeuralNetwork::NeuralNetwork(){}
@@ -60,6 +72,13 @@ NeuralNetwork::~NeuralNetwork(){
 // 	layers.push_back(layer);
 // }
 
+void NeuralNetwork::setLoss(std::string l){
+	if(l == "MSE")
+		loss = new MSE;
+	else
+		throw std::invalid_argument("Invalid activation");
+}
+
 void NeuralNetwork::add(std::string type, int nn, std::string act, std::string dist, float w){
 	Layer *layer;
 
@@ -77,9 +96,44 @@ void NeuralNetwork::add(std::string type, int nn, std::string act, std::string d
 
 
 
-void NeuralNetwork::fit(int bacth_size_){
-	setBacthSize(bacth_size_);
-	std::cout << "Fit method unimplemented" << std::endl;
+void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
+	setBatchSize(batch_size_);
+	// Setear loss
+	// Setear  batth
+	// Setear optimizador (este deberia tener el lr)
+	// Setear metrica
+	// - Training 
+	// For sobre epocas
+	// 		como hago para quedarme con un pedazo de datos?
+	// 		- Le puedo pasar la matrix y los indices en donde se tiene que quedar (deberian ser random)
+	//		Forward con batch (optimizador)
+	//		Backward con batch (optimizador)
+	//		Calcular loss y metrica y appendear
+	//	Calcular metricas para val_data
+
+	int nSamples = X.getHeight();		// Numero de datos
+	// int nBatch = int(nSamples / batch_size);	// Numero de Batchs
+	int *idx = new int[nSamples];		// Indices
+	for(int i=0; i < nSamples; ++i){
+		idx[i] = i;
+	}
+	// Alloco los indices en device
+	float *d_idx;
+	cudaMalloc(&d_idx, nSamples * sizeof(int));
+
+	srand(time(0));
+
+	for(int e = 1; e <= epochs; ++e){
+		// shuffleo los indices en host
+		std::random_shuffle(&idx[0], &idx[nSamples]);
+		// lo paso a device
+		cudaMemcpy(d_idx, idx, nSamples * sizeof(int), cudaMemcpyHostToDevice);
+
+		continue;
+	}
+
+	delete [] idx;
+	cudaFree(d_idx);
 	return;
 }
 
@@ -88,13 +142,31 @@ void NeuralNetwork::predict(){
 	return;
 }
 
-void NeuralNetwork::forward(){
-	std::cout << "Forward method unimplemented" << std::endl;
-	return;
+void NeuralNetwork::forward(Matrix &X){
+	std::vector<Layer*>::iterator l, l_prev;
+	l = layers.begin();
+	l_prev = layers.begin();
+
+	// Tomo la matriz de entrada y la "guardo" en el layer input
+	// (*l)->forward(X);	CREO QUE NO HACE FALTA
+	l++;
+	
+	// Actualizo iterativamente la salida de cada capa
+	while(l != layers.end()){
+		(*l)->forward((*l_prev)->getOutput());
+		l++;
+		l_prev++;
+	}
+	// Creo con eso ya estaria, no? La ultima capa ya deberia tener su
+	// salida y con eso deberia poder calcular el costo.
 }
 
 void NeuralNetwork::backward(){
 	std::cout << "Backward method unimplemented" << std::endl;
+	// calcular el costo con la ultima capa usando el y_true
+	// Actualizar el gradiente de la ultima capa
+	// Iterativamente calcular los dW y dY de cada capa
+	// Actualizar W usando los dW calculados
 	return;
 }
 
@@ -137,18 +209,21 @@ void NeuralNetwork::printAllDimensions(){
 
 }
 
-void NeuralNetwork::setBacthSize(int bacth_size_){
-	bacth_size = bacth_size_;
+void NeuralNetwork::setBatchSize(int batch_size_){
+	batch_size = batch_size_;
 	std::vector<Layer*>::iterator itr;
 
 	for(itr = layers.begin(); itr != layers.end(); ++itr){
 		int out_dim = (*itr)->getWidth();
 
-		(*itr)->getOutput().initialize(bacth_size, out_dim);
-		(*itr)->getGradOutput().initialize(bacth_size, out_dim);
+		(*itr)->getOutput().initialize(batch_size, out_dim);
+		(*itr)->getGradOutput().initialize(batch_size, out_dim);
 	}
 }
 
+Loss* NeuralNetwork::getLoss(){return loss;}
+
+std::vector<Layer*>& NeuralNetwork::getLayers(){return layers;}
 
 
 
