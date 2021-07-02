@@ -9,103 +9,103 @@ Description:
 */
 
 // #include "Matrix/Matrix.h"
-#include "Matrix.cu"
-#include "Activation.cu"
-#include "layers.cu"
+// #include "Matrix.cu"
+// #include "Activation.cu"
+// #include "layers.cu"
 #include "models.cu"
-#include "losses.cu"
+// #include "losses.cu"
 
 // #define BLOCK_SIZE 2
 // #define TILE_DIM 2
 
 
 
-// Kernel modified from https://www.programmersought.com/article/13436584263/
-template<int BLOCK_SIZE> __global__ void
-MatrixMulCUDA(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
-	//Block index
-	int bx = blockIdx.x;
-	int by = blockIdx.y;
+// // Kernel modified from https://www.programmersought.com/article/13436584263/
+// template<int BLOCK_SIZE> __global__ void
+// MatrixMulCUDA(float* A, float* B, float* C, int wA, int wB, int hA, int hB){
+// 	//Block index
+// 	int bx = blockIdx.x;
+// 	int by = blockIdx.y;
 
-	//Thread index
-	int tx = threadIdx.x;
-	int ty = threadIdx.y;
+// 	//Thread index
+// 	int tx = threadIdx.x;
+// 	int ty = threadIdx.y;
 
-	/* Divide the matrix into sub-matrices, apply the parallel calculation of the thread in the block
-	to the multiplication of the sub-matrices, and finally add their values ​​to obtain an element value of C */
-	int aBegin = by * BLOCK_SIZE * wA;	//The row coordinates of the sub-matrix of A
-	int aStep = BLOCK_SIZE;				//The movement step size of A's sub-matrix column coordinates
-	int aEnd = aBegin + wA - 1;			//Limit an end point
+// 	/* Divide the matrix into sub-matrices, apply the parallel calculation of the thread in the block
+// 	to the multiplication of the sub-matrices, and finally add their values ​​to obtain an element value of C */
+// 	int aBegin = by * BLOCK_SIZE * wA;	//The row coordinates of the sub-matrix of A
+// 	int aStep = BLOCK_SIZE;				//The movement step size of A's sub-matrix column coordinates
+// 	int aEnd = aBegin + wA - 1;			//Limit an end point
 
-	int bBegin = bx * BLOCK_SIZE;
-	int bStep = BLOCK_SIZE * wB;
+// 	int bBegin = bx * BLOCK_SIZE;
+// 	int bStep = BLOCK_SIZE * wB;
 
-	float Csub = 0;	//Define the element value of C at the corresponding position in the block (x,. y) (ty, tx)
+// 	float Csub = 0;	//Define the element value of C at the corresponding position in the block (x,. y) (ty, tx)
 
-	int subAw = BLOCK_SIZE;
-	int subAh = BLOCK_SIZE;
-	int subBh = BLOCK_SIZE;
-	int subBw = BLOCK_SIZE;
+// 	int subAw = BLOCK_SIZE;
+// 	int subAh = BLOCK_SIZE;
+// 	int subBh = BLOCK_SIZE;
+// 	int subBw = BLOCK_SIZE;
 
-	for (int a = aBegin, b = bBegin; a <= aEnd; a += aStep, b += bStep){
-		//The number of columns in the last column of the A matrix is ​​less than BLOCK_SIZE
-		if (a + aStep - 1 > aEnd){			
-			subAw = aEnd - a + 1;
-		}else{
-			subAw = BLOCK_SIZE;
-		}
-		subBh = subAw;
+// 	for (int a = aBegin, b = bBegin; a <= aEnd; a += aStep, b += bStep){
+// 		//The number of columns in the last column of the A matrix is ​​less than BLOCK_SIZE
+// 		if (a + aStep - 1 > aEnd){			
+// 			subAw = aEnd - a + 1;
+// 		}else{
+// 			subAw = BLOCK_SIZE;
+// 		}
+// 		subBh = subAw;
 
-		//The number of rows in the last row of the A matrix is ​​less than BLOCK_SIZE
-		if ((by + 1) * BLOCK_SIZE > hA){
-			subAh = hA - by * BLOCK_SIZE;
-		}else{
-			subAh = BLOCK_SIZE;
-		}
+// 		//The number of rows in the last row of the A matrix is ​​less than BLOCK_SIZE
+// 		if ((by + 1) * BLOCK_SIZE > hA){
+// 			subAh = hA - by * BLOCK_SIZE;
+// 		}else{
+// 			subAh = BLOCK_SIZE;
+// 		}
 
-		//The number of columns in the last column of the B matrix is ​​less than BLOCK_SIZE
-		if ((bx + 1) * BLOCK_SIZE > wB){
-			subBw = wB - bx * BLOCK_SIZE;
-		}else{
-			subBw = BLOCK_SIZE;
-		}
+// 		//The number of columns in the last column of the B matrix is ​​less than BLOCK_SIZE
+// 		if ((bx + 1) * BLOCK_SIZE > wB){
+// 			subBw = wB - bx * BLOCK_SIZE;
+// 		}else{
+// 			subBw = BLOCK_SIZE;
+// 		}
 		
-		/* Develop shared memory in the block */
-		__shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
-		__shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+// 		/* Develop shared memory in the block */
+// 		__shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+// 		__shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
 
-		/* Assign values ​​to the corresponding elements of the sub-matrix in the range of rows and columns */
-		if (ty < subAh && tx < subAw){
-			As[ty][tx] = A[a + ty * wA + tx];
-		}
-		if (ty < subBh && tx < subBw){
-			Bs[ty][tx] = B[b + ty * wB + tx];
-		}
-		__syncthreads();
+// 		/* Assign values ​​to the corresponding elements of the sub-matrix in the range of rows and columns */
+// 		if (ty < subAh && tx < subAw){
+// 			As[ty][tx] = A[a + ty * wA + tx];
+// 		}
+// 		if (ty < subBh && tx < subBw){
+// 			Bs[ty][tx] = B[b + ty * wB + tx];
+// 		}
+// 		__syncthreads();
 
-		//Unroll the loop to compile to speed up		
-		#pragma unroll
-		//The inner loop calculates the vector product of the corresponding row and column in each sub-matrix and adds it to the previously obtained value
-		for (int k = 0; k < subAw; k++){
-			//Satisfy the elements within the row and column constraints to calculate the product and sum
-			if (ty < subAh && tx < subBw){
-				Csub += As[ty][k] * Bs[k][tx];
-			}			
-		}
-		__syncthreads();
-	}
+// 		//Unroll the loop to compile to speed up		
+// 		#pragma unroll
+// 		//The inner loop calculates the vector product of the corresponding row and column in each sub-matrix and adds it to the previously obtained value
+// 		for (int k = 0; k < subAw; k++){
+// 			//Satisfy the elements within the row and column constraints to calculate the product and sum
+// 			if (ty < subAh && tx < subBw){
+// 				Csub += As[ty][k] * Bs[k][tx];
+// 			}			
+// 		}
+// 		__syncthreads();
+// 	}
 
-	//Satisfy the elements within the row and column constraints to calculate the product and sum
-	if (ty < subAh && tx < subBw)
-	{
-		C[by * BLOCK_SIZE * wB + bx * BLOCK_SIZE + ty * wB + tx] = Csub;
-	}	
-}
+// 	//Satisfy the elements within the row and column constraints to calculate the product and sum
+// 	if (ty < subAh && tx < subBw)
+// 	{
+// 		C[by * BLOCK_SIZE * wB + bx * BLOCK_SIZE + ty * wB + tx] = Csub;
+// 	}	
+// }
 
 
 void testRed();
 
-void testMatrixMulCUDA();
+// void testMatrixMulCUDA();
 
 
 
@@ -113,6 +113,8 @@ void testMatrixMulCUDA();
 int main(int argc, const char** argv){
 	
 	testRed();
+
+	// testMatrixMulCUDA();
 
 
 
@@ -122,89 +124,98 @@ int main(int argc, const char** argv){
 
 
 void testRed(){
+	// Matrix X_train(10,3);
+	// Matrix Y_train(10,2);
 
 	NeuralNetwork nn(2,3);
+	// NeuralNetwork nn();
+	nn.setLoss("MSE");
 	nn.add("Dense",3,"linear");
 	nn.add("Dense",2,"relu");
 
-	// nn.print();
+	// std::cout << "message" << std::endl;
 
-	// nn.printWeights();
+	// // nn.print();
+
+	// // nn.printWeights();
 
 	nn.setBatchSize(10);
 	nn.printAllDimensions();
 
+
+	// nn.fit(X_train, Y_train, 10, 2);
+
 }
 
 
-void testMatrixMulCUDA(){
-	const int block_size = 32;
+// void testMatrixMulCUDA(){
+// 	const int block_size = 32;
 
 	
-	Matrix X(3, 2, "uniform");
-	Matrix W(2, 4, "uniform");
-	Matrix b(1, 4, "uniform");
-	Matrix Y(3, 4, "zeros");
+// 	Matrix X(3, 2, "uniform");
+// 	Matrix W(2, 4, "uniform");
+// 	Matrix b(1, 4, "uniform");
+// 	Matrix Y(3, 4, "zeros");
 
 	
-	// y_pred.copyDeviceToHost();
-	// y_true.copyDeviceToHost();
-	// dY.copyDeviceToHost();
+// 	// y_pred.copyDeviceToHost();
+// 	// y_true.copyDeviceToHost();
+// 	// dY.copyDeviceToHost();
 
-	std::cout << "X" << std::endl; X.print(); std::cout << std::endl;
-	std::cout << "W" << std::endl; W.print(); std::cout << std::endl;
-	std::cout << "b" << std::endl; b.print(); std::cout << std::endl;
-	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
+// 	std::cout << "X" << std::endl; X.print(); std::cout << std::endl;
+// 	std::cout << "W" << std::endl; W.print(); std::cout << std::endl;
+// 	std::cout << "b" << std::endl; b.print(); std::cout << std::endl;
+// 	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
 	
-	// int dev;
-	// cudaGetDevice(&dev);
+// 	// int dev;
+// 	// cudaGetDevice(&dev);
 	
-	// cudaDeviceProp deviceProp;
-    // cudaGetDeviceProperties(&deviceProp, dev);
+// 	// cudaDeviceProp deviceProp;
+//     // cudaGetDeviceProperties(&deviceProp, dev);
 	
-	// // dim3 nThreads(256);
-	// dim3 nThreads(deviceProp.maxThreadsDim[0]);
-	// dim3 nBlocks((C.size + nThreads.x - 1) / nThreads.x);
-	// if(nBlocks.x > deviceProp.maxGridSize[0]){
-	// 	nBlocks.x = deviceProp.maxGridSize[0];
-	// }
+// 	// // dim3 nThreads(256);
+// 	// dim3 nThreads(deviceProp.maxThreadsDim[0]);
+// 	// dim3 nBlocks((C.size + nThreads.x - 1) / nThreads.x);
+// 	// if(nBlocks.x > deviceProp.maxGridSize[0]){
+// 	// 	nBlocks.x = deviceProp.maxGridSize[0];
+// 	// }
 	
-	// MatMulCublas(A, B, C);
-	// AdotBKernel<<< 256, 1024 >>>(
-	// 	A.getDeviceData(),
-	// 	B.getDeviceData(),
-	// 	C.getDeviceData(),
-	// 	A.getWidth(),
-	// 	A.getHeight(),
-	// 	B.getWidth(),
-	// 	B.getHeight()
-	// );
-	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-	// dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
+// 	// MatMulCublas(A, B, C);
+// 	// AdotBKernel<<< 256, 1024 >>>(
+// 	// 	A.getDeviceData(),
+// 	// 	B.getDeviceData(),
+// 	// 	C.getDeviceData(),
+// 	// 	A.getWidth(),
+// 	// 	A.getHeight(),
+// 	// 	B.getWidth(),
+// 	// 	B.getHeight()
+// 	// );
+// 	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+// 	// dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
 
-	dim3 threads(block_size, block_size);
-	dim3 grid((W.width -1) / threads.x + 1, (X.height - 1) / threads.y + 1);
-	// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
+// 	dim3 threads(block_size, block_size);
+// 	dim3 grid((W.width -1) / threads.x + 1, (X.height - 1) / threads.y + 1);
+// 	// dim3 grid((dimsB.x -1) / threads.x + 1, (dimsA.y - 1) / threads.y + 1);
 	
-	XdotWplusBias<block_size> <<<grid, threads >>> (
-		X.getDeviceData(),
-		W.getDeviceData(),
-		Y.getDeviceData(),
-		X.getWidth(),
-		W.getWidth(),
-		X.getHeight(),
-		W.getHeight(),
-		b.getDeviceData()
-	);
-	cudaDeviceSynchronize();
+// 	XdotWplusBias<block_size> <<<grid, threads >>> (
+// 		X.getDeviceData(),
+// 		W.getDeviceData(),
+// 		Y.getDeviceData(),
+// 		X.getWidth(),
+// 		W.getWidth(),
+// 		X.getHeight(),
+// 		W.getHeight(),
+// 		b.getDeviceData()
+// 	);
+// 	cudaDeviceSynchronize();
 
 
 
-	Y.copyDeviceToHost();
+// 	Y.copyDeviceToHost();
 	
-	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
+// 	std::cout << "Y" << std::endl; Y.print(); std::cout << std::endl;
 	
-}
+// }
 
 
 
