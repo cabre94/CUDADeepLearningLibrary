@@ -6,6 +6,11 @@
 #include <stdio.h>
 #include "Matrix.cu"
 
+// En cada gradiente agregue el termino d_in[i]
+// No se si esta bien
+// Se supone que me ahorro un paso con eso porque es el 
+// gradiente de la activacion
+
 
 /* ----------------------------
 Activation class
@@ -104,7 +109,7 @@ __global__ void sigmoidGradKernel(float *d_in, float *d_out, int size){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	while(i < size){
-		float sig = sigmoid(d_in[i]);
+		float sig = d_in[i] * sigmoid(d_in[i]);
 		d_out[i] = sig * (1.0f - sig);
 
 		i += blockDim.x * gridDim.x;
@@ -180,7 +185,7 @@ __global__ void reluGradKernel(float *d_in, float *d_out, int size){
 
 	while(i < size){
 		if(d_in[i] > 0)
-			d_out[i] = 1.0;
+			d_out[i] = d_in[i] * 1.0;
 		else
 			d_out[i] = 0.0;
 
@@ -256,7 +261,7 @@ __global__ void linearGradKernel(float *d_in, float *d_out, int size){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	while(i < size){
-		d_out[i] = 1;
+		d_out[i] = d_in[i] * 1;
 		i += blockDim.x * gridDim.x;
 	}
 }
@@ -329,7 +334,7 @@ __global__ void tanhGradKernel(float *d_in, float *d_out, int size){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	while(i < size){
-		d_out[i] = 1.0f - powf(tanhf(d_in[i]), 2.0f);
+		d_out[i] = d_in[i] * (1.0f - powf(tanhf(d_in[i]), 2.0f));
 		i += blockDim.x * gridDim.x;
 	}
 }
@@ -405,9 +410,9 @@ __global__ void leakyReluGradKernel(float *d_in, float *d_out, int size, float a
 
 	while(i < size){
 		if(d_in[i] > 0)
-			d_out[i] = 1.0;
+			d_out[i] = d_in[i] * 1.0;
 		else
-			d_out[i] = 1.0*arg;
+			d_out[i] = d_in[i] * 1.0 * arg;
 
 		i += blockDim.x * gridDim.x;
 	}
