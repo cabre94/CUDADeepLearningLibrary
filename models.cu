@@ -16,8 +16,8 @@
 class Optimizer;
 
 class NeuralNetwork{
-public:
-// private:
+// public:
+private:
     std::vector<Layer*> layers;
 	// optimizador
 	Loss *loss; // loss
@@ -27,6 +27,8 @@ public:
 	std::vector<float> acc_log, val_acc_log;
 
 	Matrix y, val_y;
+
+	bool loss_seted = false;
     
 public:
 	NeuralNetwork();	//Default constructor
@@ -39,7 +41,7 @@ public:
 	// void getLayer(int idx);
 	// void fit(int epochs, int batch_size_ = 1);
 	void fit(Matrix &X, Matrix &Y, int epochs, int batch_size_ = 1);
-	void predict();
+	Matrix& predict();
 	void forward(Matrix &X);
 	void backward();
 
@@ -63,20 +65,22 @@ NeuralNetwork::NeuralNetwork(int width, int height){
 
 NeuralNetwork::~NeuralNetwork(){
 	std::vector<Layer*>::iterator itr;
-	for(itr = layers.begin(); itr != layers.end(); ++itr){
-		delete (*itr);
+	if(!layers.empty()){
+		for(itr = layers.begin(); itr != layers.end(); ++itr){
+			delete (*itr);
+		}
+	}
+	if(loss_seted){
+		delete loss;
 	}
 }
-
-// void NeuralNetwork::add(Layer *layer){
-// 	layers.push_back(layer);
-// }
 
 void NeuralNetwork::setLoss(std::string l){
 	if(l == "MSE")
 		loss = new MSE;
 	else
 		throw std::invalid_argument("Invalid activation");
+	loss_seted = true;
 }
 
 void NeuralNetwork::add(std::string type, int nn, std::string act, std::string dist, float w){
@@ -87,8 +91,7 @@ void NeuralNetwork::add(std::string type, int nn, std::string act, std::string d
 		int input_shape = last_layer->getWidth();
 		// layer = new Dense(nn,input_shape, act, dist, w);
 		layer = new Dense(input_shape, nn, act, dist, w);
-	}
-	else
+	}else
 		throw std::invalid_argument("Invalid layer");
 
 	layers.push_back(layer);
@@ -129,7 +132,6 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 		// lo paso a device
 		cudaMemcpy(d_idx, idx, nSamples * sizeof(int), cudaMemcpyHostToDevice);
 
-		continue;
 	}
 
 	delete [] idx;
@@ -137,9 +139,10 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 	return;
 }
 
-void NeuralNetwork::predict(){
-	std::cout << "Predict method unimplemented" << std::endl;
-	return;
+Matrix& NeuralNetwork::predict(){
+	// Asumo que ya hice el forward por ahora
+	Layer *last_layer = layers.back();
+	return last_layer->getOutput();
 }
 
 void NeuralNetwork::forward(Matrix &X){
