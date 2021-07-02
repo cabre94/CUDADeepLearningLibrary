@@ -107,14 +107,25 @@ void testRed();
 
 // void testMatrixMulCUDA();
 
+void testCopy();
+
+void testTranspose();
+
+void XOR();
 
 
 
 int main(int argc, const char** argv){
 	
-	testRed();
+	// testRed();
+
+	// testCopy();
 
 	// testMatrixMulCUDA();
+
+	// testTranspose();
+
+	XOR();
 
 
 
@@ -123,30 +134,135 @@ int main(int argc, const char** argv){
 
 
 
+
+void XOR(){
+	Matrix X(4,2);
+	Matrix Y(4,1,"zeros");
+
+	// Voy a poner los valores que corresponden
+	X.h_elem[0] =  1; X.h_elem[1] =  1;
+	X.h_elem[2] =  1; X.h_elem[3] = -1;
+	X.h_elem[4] = -1; X.h_elem[5] =  1;
+	X.h_elem[6] = -1; X.h_elem[7] = -1;
+	X.copyHostToDevice();
+
+	Y.h_elem[0] = 1; Y.h_elem[1] = -1; 
+	Y.h_elem[2] = -1; Y.h_elem[3] = 1; 
+	Y.copyHostToDevice();
+
+	NeuralNetwork nn(2,2);
+	// NeuralNetwork nn();
+	nn.setLoss("MSE");
+	nn.add("Dense",100,"tanh");
+	nn.add("Dense",1,"tanh");
+	
+	
+	nn.fit(X, Y, 0.001, 10000);
+
+
+}
+
+
+void testTranspose(){
+
+	Matrix X(5,3);
+	Matrix Y(3,5,"zeros");
+	X.print(); std::cout << std::endl;
+	Y.print(); std::cout << std::endl;
+
+	const int block_size = 16;
+
+	// dim3 threads(block_size, block_size);
+	// dim3 grid((X.width -1) / threads.x + 1, (Y.height - 1) / threads.y + 1);
+
+    dim3 threads(block_size, block_size, 1);
+	dim3 grid((X.width -1) / threads.x + 1, (Y.height - 1) / threads.y + 1);
+	// dim3 grid(X.width / block_size, Y.width / block_size, 1);
+
+	transpose<block_size> <<<grid, threads >>> (
+		Y.getDeviceData(),
+		X.getDeviceData(),
+		X.getWidth(),
+		Y.getWidth()
+	);
+
+	cudaDeviceSynchronize();
+
+	Y.copyDeviceToHost();
+	Y.print(); std::cout << std::endl;
+
+}
+
+
+
 void testRed(){
-	// Matrix X_train(10,3);
-	// Matrix Y_train(10,2);
+	Matrix X_train(60000,28*28);
+	Matrix Y_train(60000,10);
 
 	NeuralNetwork nn(2,3);
 	// NeuralNetwork nn();
 	nn.setLoss("MSE");
-	nn.add("Dense",3,"linear");
-	nn.add("Dense",2,"relu");
+	nn.add("Dense",100,"relu");
+	nn.add("Dense",100,"relu");
+	nn.add("Dense",10,"relu");
 
+	nn.printWeights();
 	// std::cout << "message" << std::endl;
 
 	// // nn.print();
 
-	// // nn.printWeights();
+	nn.printWeights();
 
-	nn.setBatchSize(10);
-	nn.printAllDimensions();
+	nn.setBatchSize(5);
+	// nn.printAllDimensions();
+	nn.printWeights();
+	
+	
+	nn.fit(X_train, Y_train, 0.001, 250);
 
+	// std::vector<float> vec = nn.getLoss();
+	// std::vector<float>::iterator itr;
+	// for(itr = vec.begin(); itr != vec.end(); ++itr){
+	// 	std::cout << (*itr) << std::endl;
+	// }
 
-	// nn.fit(X_train, Y_train, 10, 2);
+	// std::vector<float> t = nn.getTimes();
+	// // std::vector<float>::iterator itr;
+	// for(itr = t.begin(); itr != t.end(); ++itr){
+	// 	std::cout << (*itr) << " ms" << std::endl;
+	// }
 
 }
 
+
+void testCopy(){
+	Matrix X_train(10,2,"uniform");
+	Matrix Y_train(3,2,"zeros");
+	X_train.print(); std::cout << std::endl;
+	Y_train.print(); std::cout << std::endl;
+
+
+	int *idx = new int[10];		// Indices
+	for(int i=0; i < 10; ++i){idx[i] = i;}
+	int *d_idx;
+	cudaMalloc(&d_idx, 10 * sizeof(int));
+	// srand(time(0));
+	// std::random_shuffle(&idx[0], &idx[3]);
+	cudaMemcpy(d_idx, idx, 10 * sizeof(int), cudaMemcpyHostToDevice);
+
+	Y_train.copyDeviceDataFromBatch(X_train, d_idx, 0);
+	// Y_train.copyDeviceDataFromAnother(X_train);
+	Y_train.copyDeviceToHost();
+	Y_train.print();
+
+
+
+
+
+
+	delete [] idx;
+	cudaFree(d_idx);
+}
 
 // void testMatrixMulCUDA(){
 // 	const int block_size = 32;
