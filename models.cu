@@ -22,6 +22,7 @@ private:
     std::vector<Layer*> layers;
 	// optimizador
 	Loss *loss; // loss
+	Metric *metric; // loss
 	Optimizer *opt;
 	// metrica
 	int batch_size;
@@ -31,6 +32,7 @@ private:
 	Matrix Y_batch, val_Y_batch;
 
 	bool loss_seted = false;
+	bool metric_seted = false;
 	bool opt_seted = false;
 
 	cpu_timer clock;
@@ -43,6 +45,7 @@ public:
 
 	// void add(Layer *layer);
 	void setLoss(std::string l="MSE");
+	void setMetric(std::string m="MSE_XOR");
 	void setOptimizer(std::string opt="SGD", float lr=1e-2);
 
 	void add(std::string type, int nn, std::string act, std::string dist = "uniform", float w = 0.1);
@@ -190,6 +193,9 @@ NeuralNetwork::~NeuralNetwork(){
 	if(loss_seted){
 		delete loss;
 	}
+	if(metric_seted){
+		delete metric;
+	}
 	if(opt_seted){
 		delete opt;
 	}
@@ -201,6 +207,14 @@ void NeuralNetwork::setLoss(std::string l){
 	else
 		throw std::invalid_argument("Invalid activation");
 	loss_seted = true;
+}
+
+void NeuralNetwork::setMetric(std::string m){
+	if(m == "MSE_XOR")
+		metric = new MSE_XOR;
+	else
+		throw std::invalid_argument("Invalid activation");
+	metric_seted = true;
 }
 
 void NeuralNetwork::setOptimizer(std::string opt_, float lr){
@@ -233,11 +247,13 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, float lr, int epochs, int batch_si
 
 	std::vector<Layer*>::iterator itr = layers.begin();
 	float loss_epoch;
+	float acc_epoch;
 
 
 	for(int e = 1; e <= epochs; ++e){
 		clock.tic();
 
+		itr = layers.begin();
 		// Mando los datos al primer layer
 		(*itr)->getOutput().copyDeviceDataFromAnother(X);
 		// Transpongo esto
@@ -262,8 +278,8 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, float lr, int epochs, int batch_si
 		
 		// // Calculo la loss
 		loss_epoch = loss->call((*itr)->getOutput(), Y_batch);
-
 		// Calcular metrica
+		acc_epoch = metric->call((*itr)->getOutput(), Y_batch);
 		
 		//Backward
 		// Primero actualizo el gradiente de la ultima capa
@@ -276,7 +292,7 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, float lr, int epochs, int batch_si
 		itr = layers.begin();
 		itr++;
 		int i = 0;
-		for(; itr != layers.end()-1; ++itr){
+		for(; itr != layers.end(); ++itr){
 			(*itr)->updateW(lr);
 			// std::cout << "W" << std::endl;
 			// (*itr)->getW().print();
@@ -290,13 +306,14 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, float lr, int epochs, int batch_si
 
 
 		loss_log.push_back(loss_epoch);
-		// acc_log.push_back(loss_epoch);
+		acc_log.push_back(acc_epoch);
 		// val_loss_log.push_back(loss_epoch);
 		// val_acc_log.push_back(loss_epoch);
 
 		// printf("e= %d - t = %f ms\n", e, clock.tac());
 		std::cout << "e= " << e;
 		std::cout << " - loss = " << loss_epoch;
+		std::cout << " - acc = " << acc_epoch;
 		std::cout << " - t = " << clock.tac();
 		std::cout << " ms" << std::endl << std::flush;
 		
