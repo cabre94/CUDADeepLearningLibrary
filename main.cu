@@ -153,6 +153,7 @@ void XOR(){
 	NeuralNetwork nn(2,2);
 	// NeuralNetwork nn();
 	nn.setLoss("MSE");
+	nn.setMetric("MSE_XOR");
 	nn.add("Dense",100,"tanh");
 	nn.add("Dense",1,"tanh");
 	
