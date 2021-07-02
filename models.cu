@@ -21,6 +21,7 @@ private:
     std::vector<Layer*> layers;
 	// optimizador
 	Loss *loss; // loss
+	Optimizer *opt;
 	// metrica
 	int batch_size;
 	std::vector<float> loss_log, val_loss_log;
@@ -29,7 +30,8 @@ private:
 	Matrix y, val_y;
 
 	bool loss_seted = false;
-    
+	bool opt_seted = false;
+
 public:
 	NeuralNetwork();	//Default constructor
 	NeuralNetwork(int width, int height);	//Default constructor
@@ -37,6 +39,8 @@ public:
 
 	// void add(Layer *layer);
 	void setLoss(std::string l="MSE");
+	void setOptimizer(std::string opt="SGD", float lr=1e-2);
+
 	void add(std::string type, int nn, std::string act, std::string dist = "uniform", float w = 0.1);
 	// void getLayer(int idx);
 	// void fit(int epochs, int batch_size_ = 1);
@@ -51,8 +55,13 @@ public:
 
 	void setBatchSize(int batch_size);
 
-	Loss* getLoss();
+	Loss* getLossFunction();
 	std::vector<Layer*>& getLayers();
+
+	std::vector<float>& getLoss(){return loss_log;}
+	std::vector<float>& getValLoss(){return val_loss_log;}
+	std::vector<float>& getAcc(){return acc_log;}
+	std::vector<float>& getValAcc(){return val_acc_log;}
 
 };
 
@@ -73,6 +82,9 @@ NeuralNetwork::~NeuralNetwork(){
 	if(loss_seted){
 		delete loss;
 	}
+	if(opt_seted){
+		delete opt;
+	}
 }
 
 void NeuralNetwork::setLoss(std::string l){
@@ -81,6 +93,14 @@ void NeuralNetwork::setLoss(std::string l){
 	else
 		throw std::invalid_argument("Invalid activation");
 	loss_seted = true;
+}
+
+void NeuralNetwork::setOptimizer(std::string opt, float lr){
+	if(opt == "SGD")
+		opt = new SGD(lr);
+	else
+		throw std::invalid_argument("Invalid activation");
+	opt_seted = true;
 }
 
 void NeuralNetwork::add(std::string type, int nn, std::string act, std::string dist, float w){
@@ -224,7 +244,7 @@ void NeuralNetwork::setBatchSize(int batch_size_){
 	}
 }
 
-Loss* NeuralNetwork::getLoss(){return loss;}
+Loss* NeuralNetwork::getLossFunction(){return loss;}
 
 std::vector<Layer*>& NeuralNetwork::getLayers(){return layers;}
 
