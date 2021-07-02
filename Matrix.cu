@@ -6,7 +6,10 @@
 #include <stdio.h>
 #include <random>
 
+// Copia los elementos de to a from
 __global__ void copyFromTo(float *from, float *to, int size);
+// Copia los elementos de las filas idx de to a from
+__global__ void copyFromToIdx(float *from, float *to, int *idx, int h, int w, int idx0);
 
 class Matrix{
 public:
@@ -35,6 +38,7 @@ public:
 
 	void initialize(int height, int width, std::string dist = "zeros", float w = 1);
 	void copyDeviceDataFromAnother(Matrix &from);
+	void copyDeviceDataFromBatch(Matrix &from, int *idx, int idx0);
 };
 
 Matrix::Matrix(){
@@ -184,6 +188,39 @@ void Matrix::copyDeviceDataFromAnother(Matrix &from){
 	// Aca Host y Device son distintos
 }
 
+void Matrix::copyDeviceDataFromBatch(Matrix &from, int *idx, int idx0){
+	// Asumo dimensiones correctas
+	int dev;
+	cudaGetDevice(&dev);
+	
+	cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
+
+	// dim3 nThreads(256);
+	// dim3 nBlocks((N + nThreads.x - 1) / nThreads.x);
+
+	// dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+    // dim3 dimGrid(B.width / dimBlock.x, A.height / dimBlock.y);
+	
+	// dim3 nThreads(256);
+	// dim3 nThreads(deviceProp.maxThreadsDim[0]);
+	// dim3 nBlocks((from.size + nThreads.x - 1) / nThreads.x);
+	// if(nBlocks.x > deviceProp.maxGridSize[0]){
+	// 	nBlocks.x = deviceProp.maxGridSize[0];
+	// }
+	dim3 dimBlock(deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1]);
+	dim3 dimGrid(width/dimBlock.x, height/dimBlock.y);
+	if(dimGrid.x > deviceProp.maxGridSize[0]){
+		dimGrid.x = deviceProp.maxGridSize[0];
+	}
+	if(dimGrid.y > deviceProp.maxGridSize[1]){
+		dimGrid.y = deviceProp.maxGridSize[1];
+	}
+	
+	copyFromToIdx<<< dimGrid, dimBlock >>>(from.getDeviceData(), d_elem, idx, height, width, idx0);
+	cudaDeviceSynchronize();
+}
+
 
 
 
@@ -199,6 +236,19 @@ __global__ void copyFromTo(float *from, float *to, int size){
 		to[i] = from[i];
 
 		i += blockDim.x * gridDim.x;
+	}
+}
+
+// from es mas grande
+// las filas de to son iguales a el tamaño
+// idx deberia tener h elementos
+
+__global__ void copyFromToIdx(float *from, float *to, int *idx, int h, int w, int idx0){
+	// lo tengo que hacer como columna
+	int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+	if(row < h && col < w){
+		to[row * w + col] = from[idx[idx0+row] * w + col];
 	}
 }
 
