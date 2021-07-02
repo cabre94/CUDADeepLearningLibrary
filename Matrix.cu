@@ -85,8 +85,10 @@ Matrix::Matrix(int height, int width, std::string dist, float w)
 }
 
 Matrix::~Matrix(){
-	delete [] h_elem;
-	cudaFree(d_elem);
+	if(allocated){
+		delete [] h_elem;
+		cudaFree(d_elem);
+	}
 }
 
 void Matrix::copyDeviceToHost(){
