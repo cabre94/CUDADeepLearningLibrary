@@ -15,8 +15,8 @@
 
 class Optimizer;
 
+
 class NeuralNetwork{
-// public:
 private:
     std::vector<Layer*> layers;
 	// optimizador
@@ -27,7 +27,7 @@ private:
 	std::vector<float> loss_log, val_loss_log;
 	std::vector<float> acc_log, val_acc_log;
 
-	Matrix y, val_y;
+	Matrix Y_batch, val_Y_batch;
 
 	bool loss_seted = false;
 	bool opt_seted = false;
@@ -62,8 +62,109 @@ public:
 	std::vector<float>& getValLoss(){return val_loss_log;}
 	std::vector<float>& getAcc(){return acc_log;}
 	std::vector<float>& getValAcc(){return val_acc_log;}
-
+	
+	Matrix& getYbatch(){return Y_batch;}
+	Matrix& getValYbatch(){return val_Y_batch;}
 };
+
+
+/* ----------------------------
+Optimizer class
+---------------------------- */
+
+class Optimizer{
+private:
+	std::string name;
+
+	float cost;
+	float acc;
+    
+public:
+	Optimizer(std::string);	//Default constructor
+	virtual ~Optimizer();
+
+	virtual void call(Matrix &X, Matrix &Y, NeuralNetwork &NN, int *d_idx, int bs) = 0;
+
+	virtual void updateW(Layer *layer) = 0;
+
+	float getCost();
+	float getAcc();
+	
+};
+
+Optimizer::Optimizer(std::string name_) : name(name_){}
+
+Optimizer::~Optimizer(){}
+
+float Optimizer::getCost(){return cost;}
+
+float Optimizer::getAcc(){return acc;}
+
+
+
+/* ----------------------------
+SGD class
+---------------------------- */
+class SGD : public Optimizer{
+private:
+    float lr;
+	
+public:
+	SGD(float lr);	//Default constructor
+	virtual ~SGD();
+	
+	void call(Matrix &X, Matrix &Y, NeuralNetwork &NN, int *d_idx, int bs);
+	
+	void updateW(Layer *layer);
+	
+};
+
+SGD::SGD(float lr) : Optimizer("SGD"), lr(lr) {}
+
+SGD::~SGD(){}
+
+void SGD::call(Matrix &X, Matrix &Y, NeuralNetwork &NN, int *d_idx, int bs){
+	int nSamples = X.getHeight();		// # de datos
+	int nBatch = int(nSamples / bs);	// # de batchs
+	float loss_mean = 0;				// Loss de la epoca
+	
+	for(int from = 0, to = bs-1; to < nSamples; from+=bs, to+=bs){
+	// for(int from = 0, to = nBatch-1; to < nSamples; from+=bs, to+=bs){
+		continue;
+		std::vector<Layer*>::iterator itr;
+		
+		// Copiar a la matrix del primer layer los datos
+		itr = NN.getLayers().begin();
+		(*itr)->getOutput().copyDeviceDataFromBatch(X, d_idx, from);
+		
+		// Ahora lo mismo para el Y_batch
+		NN.getYbatch().copyDeviceDataFromBatch(Y, d_idx, from);
+		
+		
+		// Forward
+		NN.forward((*itr)->getOutput());
+		
+		// Calculo la loss
+		loss_mean += NN.getLossFunction()->call((*itr)->getOutput(), NN.getYbatch());
+		
+		// Calcular metrica
+		
+		//Backward
+		
+		// Actualizar W
+		// Actualizar b
+	}
+	NN.getLoss().push_back(loss_mean/nBatch);
+}
+	
+void SGD::updateW(Layer *layer){
+	std::cout << "Falta implementar" << std::endl;
+}
+	
+
+
+
+
 
 NeuralNetwork::NeuralNetwork(){}
 
@@ -95,8 +196,8 @@ void NeuralNetwork::setLoss(std::string l){
 	loss_seted = true;
 }
 
-void NeuralNetwork::setOptimizer(std::string opt, float lr){
-	if(opt == "SGD")
+void NeuralNetwork::setOptimizer(std::string opt_, float lr){
+	if(opt_ == "SGD")
 		opt = new SGD(lr);
 	else
 		throw std::invalid_argument("Invalid activation");
@@ -117,10 +218,65 @@ void NeuralNetwork::add(std::string type, int nn, std::string act, std::string d
 	layers.push_back(layer);
 }
 
-
-
 void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
+	// setBatchSize(batch_size_);
+	setBatchSize(X.height);
+	// printAllDimensions();
+	int nSamples = X.getHeight();		// Numero de datos
+
+	std::vector<Layer*>::iterator itr = layers.begin();
+	float loss_epoch;
+
+
+	for(int e = 1; e <= epochs; ++e){
+		// Mando los datos al primer layer
+		(*itr)->getOutput().copyDeviceDataFromAnother(X);
+		// Mando los datos al Y_batch
+		Y_batch.copyDeviceDataFromAnother(Y);
+		
+		// // Forward
+		forward((*itr)->getOutput());
+		
+		// // Calculo la loss
+		loss_epoch = loss->call((*itr)->getOutput(), Y_batch);
+
+		// Calcular metrica
+		
+		//Backward
+		// Primero actualizo el gradiente de la ultima capa
+		Layer *last_layer = layers.back();
+		
+		// Actualizar W
+		// Actualizar b
+
+		loss_log.push_back(loss_epoch);
+		// acc_log.push_back(loss_epoch);
+		// val_loss_log.push_back(loss_epoch);
+		// val_acc_log.push_back(loss_epoch);
+
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	std::cout << "Hola" << std::endl;
+	// delete [] idx;
+	// cudaFree(d_idx);
+}
+
+/*
+void fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 	setBatchSize(batch_size_);
+	printAllDimensions();
 	// Setear loss
 	// Setear  batth
 	// Setear optimizador (este deberia tener el lr)
@@ -141,7 +297,7 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 		idx[i] = i;
 	}
 	// Alloco los indices en device
-	float *d_idx;
+	int *d_idx;
 	cudaMalloc(&d_idx, nSamples * sizeof(int));
 
 	srand(time(0));
@@ -152,12 +308,14 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 		// lo paso a device
 		cudaMemcpy(d_idx, idx, nSamples * sizeof(int), cudaMemcpyHostToDevice);
 
+		opt->call(X, Y, *this, d_idx, batch_size);
+
 	}
 
 	delete [] idx;
 	cudaFree(d_idx);
 	return;
-}
+}*/
 
 Matrix& NeuralNetwork::predict(){
 	// Asumo que ya hice el forward por ahora
@@ -242,6 +400,10 @@ void NeuralNetwork::setBatchSize(int batch_size_){
 		(*itr)->getOutput().initialize(batch_size, out_dim);
 		(*itr)->getGradOutput().initialize(batch_size, out_dim);
 	}
+	//  Y_batch, val_Y_batch;
+	Layer *last_layer = layers.back();
+	Y_batch.initialize(batch_size, last_layer->getOutput().getWidth());
+	val_Y_batch.initialize(batch_size, last_layer->getOutput().getWidth());
 }
 
 Loss* NeuralNetwork::getLossFunction(){return loss;}
