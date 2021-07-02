@@ -210,14 +210,16 @@ void Matrix::copyDeviceDataFromBatch(Matrix &from, int *idx, int idx0){
 	// if(nBlocks.x > deviceProp.maxGridSize[0]){
 	// 	nBlocks.x = deviceProp.maxGridSize[0];
 	// }
-	dim3 dimBlock(deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1]);
-	dim3 dimGrid(width/dimBlock.x, height/dimBlock.y);
-	if(dimGrid.x > deviceProp.maxGridSize[0]){
-		dimGrid.x = deviceProp.maxGridSize[0];
-	}
-	if(dimGrid.y > deviceProp.maxGridSize[1]){
-		dimGrid.y = deviceProp.maxGridSize[1];
-	}
+	// dim3 dimBlock(deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1]);
+	// dim3 dimGrid((width + dimBlock.x -1)/dimBlock.x, (height + dimBlock.y -1)/dimBlock.y);
+	// if(dimGrid.x > deviceProp.maxGridSize[0]){
+	// 	dimGrid.x = deviceProp.maxGridSize[0];
+	// }
+	// if(dimGrid.y > deviceProp.maxGridSize[1]){
+	// 	dimGrid.y = deviceProp.maxGridSize[1];
+	// }
+	dim3 dimBlock(256,256);
+	dim3 dimGrid(256,256);
 	
 	copyFromToIdx<<< dimGrid, dimBlock >>>(from.getDeviceData(), d_elem, idx, height, width, idx0);
 	cudaDeviceSynchronize();
@@ -233,6 +235,7 @@ Kernels
 
 __global__ void copyFromTo(float *from, float *to, int size){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
 
 	while(i < size){
 		to[i] = from[i];
@@ -249,6 +252,13 @@ __global__ void copyFromToIdx(float *from, float *to, int *idx, int h, int w, in
 	// lo tengo que hacer como columna
 	int col = blockIdx.x * blockDim.x + threadIdx.x;
     int row = blockIdx.y * blockDim.y + threadIdx.y;
+	for(int j=0; j<3; ++j){
+		printf("%d", idx[j]);
+	}
+	#if __CUDA_ARCH__ >= 200
+    	printf("Hi Cuda World");
+	#endif
+
 	if(row < h && col < w){
 		to[row * w + col] = from[idx[idx0+row] * w + col];
 	}
