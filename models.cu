@@ -12,6 +12,7 @@
 #include <algorithm>    // std::random_shuffle
 // #include "optimizers.cu"
 #include "metrics.cu"
+#include "cpu_timer.h"
 
 class Optimizer;
 
@@ -32,6 +33,9 @@ private:
 	bool loss_seted = false;
 	bool opt_seted = false;
 
+	cpu_timer clock;
+	std::vector<float> times;
+
 public:
 	NeuralNetwork();	//Default constructor
 	NeuralNetwork(int width, int height);	//Default constructor
@@ -44,7 +48,7 @@ public:
 	void add(std::string type, int nn, std::string act, std::string dist = "uniform", float w = 0.1);
 	// void getLayer(int idx);
 	// void fit(int epochs, int batch_size_ = 1);
-	void fit(Matrix &X, Matrix &Y, int epochs, int batch_size_ = 1);
+	void fit(Matrix &X, Matrix &Y, float lr, int epochs, int batch_size_ = 1);
 	Matrix& predict();
 	void forward(Matrix &X);
 	void backward();
@@ -65,6 +69,9 @@ public:
 	
 	Matrix& getYbatch(){return Y_batch;}
 	Matrix& getValYbatch(){return val_Y_batch;}
+	
+	std::vector<float>& getTimes(){return times;}
+	
 };
 
 
@@ -218,7 +225,7 @@ void NeuralNetwork::add(std::string type, int nn, std::string act, std::string d
 	layers.push_back(layer);
 }
 
-void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
+void NeuralNetwork::fit(Matrix &X, Matrix &Y, float lr, int epochs, int batch_size_){
 	// setBatchSize(batch_size_);
 	setBatchSize(X.height);
 	// printAllDimensions();
@@ -229,8 +236,24 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 
 
 	for(int e = 1; e <= epochs; ++e){
+		clock.tic();
+
 		// Mando los datos al primer layer
 		(*itr)->getOutput().copyDeviceDataFromAnother(X);
+		// Transpongo esto
+		dim3 threads(16, 16, 1);
+		dim3 grid((X.width -1) / threads.x + 1, ((*itr)->getOutput_T().height - 1) / threads.y + 1);
+		// dim3 grid(X.width / block_size, Y.width / block_size, 1);
+
+		transpose<16> <<<grid, threads >>> (
+			(*itr)->getOutput_T().getDeviceData(),
+			X.getDeviceData(),
+			X.getWidth(),
+			(*itr)->getOutput_T().getWidth()
+		);
+
+		cudaDeviceSynchronize();
+
 		// Mando los datos al Y_batch
 		Y_batch.copyDeviceDataFromAnother(Y);
 		
@@ -245,22 +268,40 @@ void NeuralNetwork::fit(Matrix &X, Matrix &Y, int epochs, int batch_size_){
 		//Backward
 		// Primero actualizo el gradiente de la ultima capa
 		Layer *last_layer = layers.back();
+		loss->gradient(last_layer->getOutput(), Y_batch, last_layer->getGradOutput());
+		backward();
 		
 		// Actualizar W
 		// Actualizar b
+		itr = layers.begin();
+		itr++;
+		int i = 0;
+		for(; itr != layers.end()-1; ++itr){
+			(*itr)->updateW(lr);
+			// std::cout << "W" << std::endl;
+			// (*itr)->getW().print();
+			// std::cout << "dW" << std::endl;
+			// (*itr)->getdW().print();
+			i++;
+			//
+		}
+
+
+
 
 		loss_log.push_back(loss_epoch);
 		// acc_log.push_back(loss_epoch);
 		// val_loss_log.push_back(loss_epoch);
 		// val_acc_log.push_back(loss_epoch);
 
+		// printf("e= %d - t = %f ms\n", e, clock.tac());
+		std::cout << "e= " << e;
+		std::cout << " - loss = " << loss_epoch;
+		std::cout << " - t = " << clock.tac();
+		std::cout << " ms" << std::endl << std::flush;
+		
+
 	}
-
-
-
-
-
-
 
 
 
@@ -343,12 +384,20 @@ void NeuralNetwork::forward(Matrix &X){
 }
 
 void NeuralNetwork::backward(){
-	std::cout << "Backward method unimplemented" << std::endl;
 	// calcular el costo con la ultima capa usando el y_true
 	// Actualizar el gradiente de la ultima capa
 	// Iterativamente calcular los dW y dY de cada capa
 	// Actualizar W usando los dW calculados
-	return;
+	std::vector<Layer*>::reverse_iterator l, l_post;
+	l = layers.rbegin();
+	l_post = layers.rbegin();
+	l++;
+
+	while(l != layers.rend()){
+		(*l_post)->backward((*l)->getOutput(), (*l)->getGradOutput(), (*l)->getOutput_T());
+		l++;
+		l_post++;
+	}
 }
 
 void NeuralNetwork::print(){
@@ -366,6 +415,10 @@ void NeuralNetwork::printWeights(){
 	std::vector<Layer*>::iterator itr;
 
 	for(itr = layers.begin(); itr != layers.end(); ++itr){
+		(*itr)->getW().copyDeviceToHost();
+		// (*itr)->getdW().copyDeviceToHost();
+		// (*itr)->getOutput().copyDeviceToHost();
+		// (*itr)->getGradOutput().copyDeviceToHost();
 		(*itr)->printWeights();
 		std::cout << std::endl << std::endl;
 	}
@@ -375,15 +428,23 @@ void NeuralNetwork::printAllDimensions(){
 	std::vector<Layer*>::iterator itr;
 
 	for(itr = layers.begin(); itr != layers.end(); ++itr){
+		(*itr)->getW().copyDeviceToHost();
+		(*itr)->getdW().copyDeviceToHost();
+		(*itr)->getOutput().copyDeviceToHost();
+		(*itr)->getGradOutput().copyDeviceToHost();
+		std::cout << std::endl;
 		std::cout << (*itr)->getName() << " - ";
 		// W
-		std::cout << "W" << " - ";
+		std::cout << "W" << "-";
 		(*itr)->getW().printDimensions();
+		// dW
+		std::cout << " dW" << "-";
+		(*itr)->getdW().printDimensions();
 		// Y
-		std::cout << "Y" << " - ";
+		std::cout << " Y" << "-";
 		(*itr)->getOutput().printDimensions();
 		// dY
-		std::cout << "dy" << " - ";
+		std::cout << " dY" << "-";
 		(*itr)->getGradOutput().printDimensions();
 		std::cout << std::endl;
 	}
@@ -399,6 +460,7 @@ void NeuralNetwork::setBatchSize(int batch_size_){
 
 		(*itr)->getOutput().initialize(batch_size, out_dim);
 		(*itr)->getGradOutput().initialize(batch_size, out_dim);
+		(*itr)->getOutput_T().initialize(out_dim, batch_size);
 	}
 	//  Y_batch, val_Y_batch;
 	Layer *last_layer = layers.back();
