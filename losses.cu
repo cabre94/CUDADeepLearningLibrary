@@ -52,8 +52,8 @@ MSE::MSE():Loss("MSE"){}
 MSE::~MSE(){}
 
 float MSE::call(Matrix &y_pred, Matrix &y_true){
-	assert(y_pred.width == y_true.width);
-	assert(y_pred.height == y_true.height);
+	// assert(y_pred.width == y_true.width);
+	// assert(y_pred.height == y_true.height);
 
 	// Voy a hacerlo serial y despues ver que hago
 	y_pred.copyDeviceToHost();
